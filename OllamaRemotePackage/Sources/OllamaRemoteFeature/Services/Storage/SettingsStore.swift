@@ -10,16 +10,26 @@ public final class SettingsStore: @unchecked Sendable {
     private enum Keys {
         static let providerConfigs = "providerConfigurations"
         static let selectedProviderId = "selectedProviderId"
+        static let autoSaveChats = "autoSaveChats"
+        static let fontSizeOffset = "fontSizeOffset"
+        static let hapticsEnabled = "hapticsEnabled"
     }
 
     private init() {}
 
     public func loadProviderConfigurations() -> [AnyProviderConfiguration] {
-        guard let data = defaults.data(forKey: Keys.providerConfigs) else {
+        guard let data = defaults.data(forKey: Keys.providerConfigs),
+              var configs = try? decoder.decode([AnyProviderConfiguration].self, from: data) else {
             return defaultConfigurations()
         }
-        return (try? decoder.decode([AnyProviderConfiguration].self, from: data))
-            ?? defaultConfigurations()
+
+        // Migration: Add On-Device provider if it doesn't exist
+        if !configs.contains(where: { $0.type == .onDevice }) {
+            configs.insert(.onDevice(OnDeviceConfig()), at: 0)
+            saveProviderConfigurations(configs)
+        }
+
+        return configs
     }
 
     public func saveProviderConfigurations(_ configs: [AnyProviderConfiguration]) {
@@ -39,8 +49,41 @@ public final class SettingsStore: @unchecked Sendable {
         defaults.set(id?.uuidString, forKey: Keys.selectedProviderId)
     }
 
+    public func loadAutoSaveChats() -> Bool {
+        // Default to true if not set
+        if defaults.object(forKey: Keys.autoSaveChats) == nil {
+            return true
+        }
+        return defaults.bool(forKey: Keys.autoSaveChats)
+    }
+
+    public func saveAutoSaveChats(_ enabled: Bool) {
+        defaults.set(enabled, forKey: Keys.autoSaveChats)
+    }
+
+    public func loadFontSizeOffset() -> Int {
+        defaults.integer(forKey: Keys.fontSizeOffset)
+    }
+
+    public func saveFontSizeOffset(_ offset: Int) {
+        defaults.set(offset, forKey: Keys.fontSizeOffset)
+    }
+
+    public func loadHapticsEnabled() -> Bool {
+        // Default to true if not set
+        if defaults.object(forKey: Keys.hapticsEnabled) == nil {
+            return true
+        }
+        return defaults.bool(forKey: Keys.hapticsEnabled)
+    }
+
+    public func saveHapticsEnabled(_ enabled: Bool) {
+        defaults.set(enabled, forKey: Keys.hapticsEnabled)
+    }
+
     private func defaultConfigurations() -> [AnyProviderConfiguration] {
         [
+            .onDevice(OnDeviceConfig()),
             .local(LocalOllamaConfig()),
             .cloud(OllamaCloudConfig()),
             .openRouter(OpenRouterConfig())

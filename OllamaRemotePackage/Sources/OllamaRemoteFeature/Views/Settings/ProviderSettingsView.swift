@@ -39,6 +39,8 @@ public struct ProviderSettingsView: View {
                 cloudSection
             case .openRouter:
                 openRouterSection
+            case .onDevice:
+                onDeviceSection
             }
 
             Section {
@@ -151,6 +153,50 @@ public struct ProviderSettingsView: View {
                     Image(systemName: "arrow.up.right.square")
                 }
             }
+            Link(destination: URL(string: "https://openrouter.ai")!) {
+                HStack {
+                    Text("Visit OpenRouter")
+                    Spacer()
+                    Image(systemName: "arrow.up.right.square")
+                }
+            }
+        } footer: {
+            Text("OpenRouter offers free LLMs when you sign up for an API key.")
+        }
+    }
+
+    @ViewBuilder
+    private var onDeviceSection: some View {
+        Section {
+            NavigationLink {
+                LocalModelsView()
+            } label: {
+                HStack {
+                    Image(systemName: "arrow.down.circle")
+                        .foregroundStyle(.tint)
+                    Text("Manage Local Models")
+                    Spacer()
+                    Text("\(LocalModelManager.shared.downloadedModels.count)")
+                        .foregroundStyle(.secondary)
+                }
+            }
+        } header: {
+            Text("Models")
+        } footer: {
+            Text("Download models to run completely offline using the Neural Engine.")
+        }
+
+        Section {
+            VStack(alignment: .leading, spacing: 8) {
+                Label("Neural Engine Powered", systemImage: "bolt.fill")
+                    .font(.subheadline)
+                    .foregroundStyle(.tint)
+
+                Text("Core ML models run on Apple's Neural Engine for maximum efficiency and speed. No internet required.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.vertical, 4)
         }
     }
 
@@ -175,6 +221,8 @@ public struct ProviderSettingsView: View {
                     apiKey = key
                 }
             }
+        case .onDevice:
+            break // No additional configuration needed
         }
     }
 
@@ -205,6 +253,11 @@ public struct ProviderSettingsView: View {
             Task {
                 try? await KeychainService.shared.store(key: config.apiKeyReference, value: apiKey)
             }
+
+        case .onDevice(var config):
+            config.displayName = displayName
+            config.isEnabled = isEnabled
+            updatedConfig = .onDevice(config)
         }
 
         appState.updateProviderConfiguration(updatedConfig)
@@ -215,15 +268,36 @@ public struct ProviderSettingsView: View {
         isTesting = true
         testResult = nil
 
-        // Save API key to keychain first so the provider can use it
-        if let keyRef = configuration.apiKeyReference, !apiKey.isEmpty {
-            try? await KeychainService.shared.store(key: keyRef, value: apiKey)
+        // Build config from current form values
+        let testConfig: AnyProviderConfiguration
+        switch configuration {
+        case .local(var config):
+            config.host = host
+            config.port = Int(port) ?? 11434
+            testConfig = .local(config)
+
+        case .cloud(let config):
+            // Save API key to keychain first
+            if !apiKey.isEmpty {
+                try? await KeychainService.shared.store(key: config.apiKeyReference, value: apiKey)
+            }
+            testConfig = .cloud(config)
+
+        case .openRouter(let config):
+            // Save API key to keychain first
+            if !apiKey.isEmpty {
+                try? await KeychainService.shared.store(key: config.apiKeyReference, value: apiKey)
+            }
+            testConfig = .openRouter(config)
+
+        case .onDevice:
+            testConfig = configuration
         }
 
         // Clear cache to ensure fresh provider with new credentials
         ProviderFactory.shared.clearCache()
 
-        let provider = ProviderFactory.shared.provider(for: configuration)
+        let provider = ProviderFactory.shared.provider(for: testConfig)
         do {
             _ = try await provider.testConnection()
             testResult = .success

@@ -4,18 +4,34 @@ import SwiftData
 public struct ContentView: View {
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var appState = AppState()
+    @State private var showSplash = true
 
     public init() {}
 
     public var body: some View {
-        Group {
-            if horizontalSizeClass == .regular {
-                iPadLayout
-            } else {
-                iPhoneLayout
+        ZStack {
+            Group {
+                if horizontalSizeClass == .regular {
+                    iPadLayout
+                } else {
+                    iPhoneLayout
+                }
+            }
+            .environment(appState)
+            .opacity(showSplash ? 0 : 1)
+
+            if showSplash {
+                SplashView()
+                    .transition(.opacity)
             }
         }
-        .environment(appState)
+        .onAppear {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                withAnimation(.easeOut(duration: 0.4)) {
+                    showSplash = false
+                }
+            }
+        }
     }
 
     @ViewBuilder

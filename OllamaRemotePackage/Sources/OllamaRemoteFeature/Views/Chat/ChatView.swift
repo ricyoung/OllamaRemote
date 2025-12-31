@@ -8,6 +8,8 @@ public struct ChatView: View {
 
     @State private var chatService = ChatService()
     @State private var inputText = ""
+    @State private var showShareSheet = false
+    @FocusState private var isInputFocused: Bool
 
     public init(conversation: Conversation) {
         self.conversation = conversation
@@ -26,18 +28,67 @@ public struct ChatView: View {
             MessageInputView(
                 text: $inputText,
                 isStreaming: chatService.isStreaming,
+                isFocused: $isInputFocused,
                 onSend: sendMessage,
                 onCancel: cancelStream
             )
         }
         .navigationTitle(conversation.title)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button {
+                    showShareSheet = true
+                } label: {
+                    Image(systemName: "square.and.arrow.up")
+                }
+                .disabled(conversation.messages.isEmpty)
+            }
+        }
+        .sheet(isPresented: $showShareSheet) {
+            ShareSheet(items: [exportConversation()])
+        }
         .task {
             await appState.loadModels()
+            await handlePendingMessage()
         }
         .onChange(of: appState.activeProvider?.id) { _, _ in
             Task { await appState.loadModels() }
         }
+    }
+
+    private func exportConversation() -> String {
+        var export = "# \(conversation.title)\n"
+        export += "Date: \(conversation.createdAt.formatted(date: .long, time: .shortened))\n"
+        export += "Provider: \(conversation.providerType.displayName)\n\n"
+        export += "---\n\n"
+
+        for message in conversation.sortedMessages {
+            let role = message.role == .user ? "**You**" : "**Assistant**"
+            export += "\(role):\n\(message.content)\n\n"
+        }
+
+        return export
+    }
+
+    private func handlePendingMessage() async {
+        guard let pending = appState.pendingMessage else { return }
+        appState.pendingMessage = nil
+
+        // Wait for models to load
+        while appState.isLoadingModels {
+            try? await Task.sleep(nanoseconds: 100_000_000)
+        }
+
+        guard let config = appState.activeProvider,
+              let modelId = appState.selectedModelId else { return }
+
+        await chatService.sendMessage(
+            content: pending,
+            in: conversation,
+            using: config,
+            model: modelId
+        ) { _ in }
     }
 
     @ViewBuilder
@@ -99,6 +150,17 @@ public struct ChatView: View {
               let modelId = appState.selectedModelId else { return }
 
         inputText = ""
+
+        // Haptic feedback
+        if appState.hapticsEnabled {
+            HapticService.shared.mediumTap()
+        }
+
+        // Auto-generate title from first message if still default
+        if conversation.messages.isEmpty &&
+           (conversation.title == "New Chat" || conversation.title == "New Conversation") {
+            conversation.title = String(content.prefix(40))
+        }
 
         Task {
             await chatService.sendMessage(

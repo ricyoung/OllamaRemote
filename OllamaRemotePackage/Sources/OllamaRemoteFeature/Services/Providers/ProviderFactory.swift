@@ -40,6 +40,8 @@ public final class ProviderFactory {
                 httpClient: httpClient,
                 keychainService: keychainService
             )
+        case .onDevice:
+            provider = OnDeviceProvider()
         }
 
         providerCache[configuration.id] = provider

@@ -11,6 +11,10 @@ public final class AppState {
     public var selectedModelId: String?
     public var isLoadingModels = false
     public var modelError: Error?
+    public var autoSaveChats: Bool = true
+    public var pendingMessage: String?
+    public var fontSizeOffset: Int = 0 // -2 to +2
+    public var hapticsEnabled: Bool = true
 
     private let settingsStore: SettingsStore
     private let providerFactory: ProviderFactory
@@ -35,6 +39,9 @@ public final class AppState {
         self.settingsStore = settingsStore
         self.providerFactory = providerFactory
         loadConfigurations()
+        autoSaveChats = settingsStore.loadAutoSaveChats()
+        fontSizeOffset = settingsStore.loadFontSizeOffset()
+        hapticsEnabled = settingsStore.loadHapticsEnabled()
     }
 
     public func loadConfigurations() {
@@ -95,5 +102,20 @@ public final class AppState {
             saveConfigurations()
             providerFactory.clearCache()
         }
+    }
+
+    public func setAutoSaveChats(_ enabled: Bool) {
+        autoSaveChats = enabled
+        settingsStore.saveAutoSaveChats(enabled)
+    }
+
+    public func setFontSizeOffset(_ offset: Int) {
+        fontSizeOffset = max(-2, min(2, offset))
+        settingsStore.saveFontSizeOffset(fontSizeOffset)
+    }
+
+    public func setHapticsEnabled(_ enabled: Bool) {
+        hapticsEnabled = enabled
+        settingsStore.saveHapticsEnabled(enabled)
     }
 }

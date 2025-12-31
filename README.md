@@ -1,125 +1,160 @@
-# OllamaRemote - iOS App
+# OllamaRemote
 
-A modern iOS application using a **workspace + SPM package** architecture for clean separation between app shell and feature code.
+A modern iOS/iPadOS client for interacting with Large Language Models (LLMs) across multiple providers.
 
-## AI Assistant Rules Files
+**Version:** 1.3.3
+**Platform:** iOS 18+ / iPadOS 18+
+**License:** GPL-3.0
+**Developer:** [Richard Young](https://deepknow.ai/richard)
 
-This template includes **opinionated rules files** for popular AI coding assistants. These files establish coding standards, architectural patterns, and best practices for modern iOS development using the latest APIs and Swift features.
+## Features
 
-### Included Rules Files
-- **Claude Code**: `CLAUDE.md` - Claude Code rules
-- **Cursor**: `.cursor/*.mdc` - Cursor-specific rules
-- **GitHub Copilot**: `.github/copilot-instructions.md` - GitHub Copilot rules
+### Multi-Provider Support
+- **On-Device (Neural Engine)** - Run Core ML models locally using Apple's Neural Engine for maximum privacy and offline capability
+- **Local Ollama** - Connect to Ollama running on your local network (IP:port)
+- **Ollama Cloud** - Connect to Ollama's cloud service with API key
+- **OpenRouter** - Access 200+ models including free tiers from OpenAI, Anthropic, Google, Meta, and more
 
-### Customization Options
-These rules files are **starting points** - feel free to:
-- ✅ **Edit them** to match your team's coding standards
-- ✅ **Delete them** if you prefer different approaches
-- ✅ **Add your own** rules for other AI tools
-- ✅ **Update them** as new iOS APIs become available
+### Chat Experience
+- **Streaming Responses** - Real-time token streaming for responsive conversations
+- **Markdown Rendering** - Beautiful formatting of code blocks, lists, headers, and more
+- **Conversation History** - Persistent chat history with SwiftData
+- **Auto-Generated Titles** - Conversations automatically named from first message
+- **Search** - Find past conversations by title or content
+- **Rename Conversations** - Long-press to rename any conversation
+- **Share/Export** - Export conversations as markdown
 
-### What Makes These Rules Opinionated
-- **No ViewModels**: Embraces pure SwiftUI state management patterns
-- **Swift 6+ Concurrency**: Enforces modern async/await over legacy patterns
-- **Latest APIs**: Recommends iOS 18+ features with optional iOS 26 guidelines
-- **Testing First**: Promotes Swift Testing framework over XCTest
-- **Performance Focus**: Emphasizes @Observable over @Published for better performance
+### User Experience
+- **Adaptive Layout** - Optimized for both iPhone and iPad
+- **Dark/Light Mode** - Follows system appearance
+- **Font Size Control** - Adjustable text size (-2 to +2)
+- **Haptic Feedback** - Tactile feedback for actions (toggleable)
+- **Copy Messages** - One-tap copy for AI responses
+- **Quick Start** - Start new conversations directly from the main screen
 
-**Note for AI assistants**: You MUST read the relevant rules files before making changes to ensure consistency with project standards.
+### iPad Keyboard Shortcuts
+- `⌘ + Return` - Send message
+- `⌘ + N` - New conversation
+- `⌘ + ,` - Open settings
+
+### Security
+- **Keychain Storage** - API keys stored securely in iOS Keychain
+- **On-Device Option** - Complete privacy with local model inference
+- **No Telemetry** - Your conversations stay on your device
+
+## On-Device Models
+
+Download and run models completely offline using Apple's Neural Engine:
+
+### Core ML Models (Neural Engine)
+| Model | Size | Parameters |
+|-------|------|------------|
+| Apple OpenELM 270M | 270 MB | 270M |
+| Apple OpenELM 450M | 450 MB | 450M |
+| Apple OpenELM 1.1B | 1.1 GB | 1.1B |
+| SmolLM 135M (Fastest) | 135 MB | 135M |
+
+### GGUF Models (Metal GPU)
+| Model | Size | Parameters |
+|-------|------|------------|
+| Qwen2 0.5B | 395 MB | 0.5B |
+| TinyLlama 1.1B | 637 MB | 1.1B |
+
+## Screenshots
+
+*Coming soon*
+
+## Installation
+
+### Requirements
+- iOS 18.0+ / iPadOS 18.0+
+- Xcode 16.0+
+- Swift 6.0+
+
+### Build from Source
+
+1. Clone the repository:
+```bash
+git clone https://github.com/ricyoung/OllamaRemote.git
+cd OllamaRemote
+```
+
+2. Open the workspace in Xcode:
+```bash
+open OllamaRemote.xcworkspace
+```
+
+3. Select your target device and build (⌘+R)
+
+## Configuration
+
+### Local Ollama Setup
+1. Install [Ollama](https://ollama.ai) on your Mac/PC
+2. Start Ollama: `ollama serve`
+3. In OllamaRemote, go to Settings > Local Ollama
+4. Enter your computer's IP address and port (default: 11434)
+5. Test Connection to verify
+
+### OpenRouter Setup
+1. Sign up at [OpenRouter](https://openrouter.ai)
+2. Get your API key from [openrouter.ai/keys](https://openrouter.ai/keys)
+3. In OllamaRemote, go to Settings > OpenRouter
+4. Enter your API key
+5. Enable "Prefer Free Models" for cost-free usage
+
+### On-Device Setup
+1. Go to Settings > On-Device > Manage Local Models
+2. Download your preferred model(s)
+3. Select On-Device as your provider
+4. Chat completely offline!
 
 ## Project Architecture
 
 ```
 OllamaRemote/
-├── OllamaRemote.xcworkspace/              # Open this file in Xcode
-├── OllamaRemote.xcodeproj/                # App shell project
-├── OllamaRemote/                          # App target (minimal)
-│   ├── Assets.xcassets/                # App-level assets (icons, colors)
-│   ├── OllamaRemoteApp.swift              # App entry point
-│   └── OllamaRemote.xctestplan            # Test configuration
-├── OllamaRemotePackage/                   # 🚀 Primary development area
-│   ├── Package.swift                   # Package configuration
-│   ├── Sources/OllamaRemoteFeature/       # Your feature code
-│   └── Tests/OllamaRemoteFeatureTests/    # Unit tests
-└── OllamaRemoteUITests/                   # UI automation tests
+├── OllamaRemote.xcworkspace/     # Open this in Xcode
+├── OllamaRemotePackage/          # Main development area
+│   └── Sources/OllamaRemoteFeature/
+│       ├── Models/
+│       │   ├── Provider/         # Provider configurations
+│       │   ├── Chat/             # Conversation & Message models
+│       │   └── LLM/              # LLM request/response types
+│       ├── Services/
+│       │   ├── Providers/        # LLM provider implementations
+│       │   ├── Network/          # HTTP client & streaming
+│       │   └── Storage/          # Keychain & settings
+│       └── Views/
+│           ├── Chat/             # Chat UI components
+│           ├── Conversations/    # Conversation list
+│           ├── Settings/         # Settings screens
+│           └── Components/       # Reusable components
+└── Config/                       # Build configuration
 ```
 
-## Key Architecture Points
+## Technology Stack
 
-### Workspace + SPM Structure
-- **App Shell**: `OllamaRemote/` contains minimal app lifecycle code
-- **Feature Code**: `OllamaRemotePackage/Sources/OllamaRemoteFeature/` is where most development happens
-- **Separation**: Business logic lives in the SPM package, app target just imports and displays it
+- **SwiftUI** - Modern declarative UI
+- **SwiftData** - Persistent conversation storage
+- **@Observable** - State management (not ObservableObject)
+- **async/await** - Swift concurrency
+- **Core ML** - On-device neural network inference
+- **Keychain** - Secure credential storage
 
-### Buildable Folders (Xcode 16)
-- Files added to the filesystem automatically appear in Xcode
-- No need to manually add files to project targets
-- Reduces project file conflicts in teams
+## Contributing
 
-## Development Notes
+Contributions are welcome! Please feel free to submit a Pull Request.
 
-### Code Organization
-Most development happens in `OllamaRemotePackage/Sources/OllamaRemoteFeature/` - organize your code as you prefer.
+## License
 
-### Public API Requirements
-Types exposed to the app target need `public` access:
-```swift
-public struct NewView: View {
-    public init() {}
-    
-    public var body: some View {
-        // Your view code
-    }
-}
-```
+This project is licensed under the GPL-3.0 License - see the [LICENSE](LICENSE) file for details.
 
-### Adding Dependencies
-Edit `OllamaRemotePackage/Package.swift` to add SPM dependencies:
-```swift
-dependencies: [
-    .package(url: "https://github.com/example/SomePackage", from: "1.0.0")
-],
-targets: [
-    .target(
-        name: "OllamaRemoteFeature",
-        dependencies: ["SomePackage"]
-    ),
-]
-```
+## Acknowledgments
 
-### Test Structure
-- **Unit Tests**: `OllamaRemotePackage/Tests/OllamaRemoteFeatureTests/` (Swift Testing framework)
-- **UI Tests**: `OllamaRemoteUITests/` (XCUITest framework)
-- **Test Plan**: `OllamaRemote.xctestplan` coordinates all tests
+- [Ollama](https://ollama.ai) for local LLM inference
+- [OpenRouter](https://openrouter.ai) for unified LLM API access
+- [Apple](https://developer.apple.com/machine-learning/core-ml/) for Core ML and Neural Engine
+- Built with [XcodeBuildMCP](https://github.com/cameroncooke/XcodeBuildMCP)
 
-## Configuration
+---
 
-### XCConfig Build Settings
-Build settings are managed through **XCConfig files** in `Config/`:
-- `Config/Shared.xcconfig` - Common settings (bundle ID, versions, deployment target)
-- `Config/Debug.xcconfig` - Debug-specific settings  
-- `Config/Release.xcconfig` - Release-specific settings
-- `Config/Tests.xcconfig` - Test-specific settings
-
-### Entitlements Management
-App capabilities are managed through a **declarative entitlements file**:
-- `Config/OllamaRemote.entitlements` - All app entitlements and capabilities
-- AI agents can safely edit this XML file to add HealthKit, CloudKit, Push Notifications, etc.
-- No need to modify complex Xcode project files
-
-### Asset Management
-- **App-Level Assets**: `OllamaRemote/Assets.xcassets/` (app icon, accent color)
-- **Feature Assets**: Add `Resources/` folder to SPM package if needed
-
-### SPM Package Resources
-To include assets in your feature package:
-```swift
-.target(
-    name: "OllamaRemoteFeature",
-    dependencies: [],
-    resources: [.process("Resources")]
-)
-```
-
-### Generated with XcodeBuildMCP
-This project was scaffolded using [XcodeBuildMCP](https://github.com/cameroncooke/XcodeBuildMCP), which provides tools for AI-assisted iOS development workflows.
+**Developed by [Richard Young](https://deepknow.ai/richard)**
