@@ -4,6 +4,8 @@ public struct MessageView: View {
     let message: Message
     @Environment(AppState.self) private var appState
     @State private var showCopied = false
+    @State private var showSaved = false
+    @State private var showShareSheet = false
 
     public init(message: Message) {
         self.message = message
@@ -62,9 +64,9 @@ public struct MessageView: View {
                 }
             }
 
-            // Copy button below the message for assistant
+            // Action buttons below the message for assistant
             if message.role == .assistant && !message.isStreaming && !message.content.isEmpty {
-                HStack {
+                HStack(spacing: 16) {
                     Button {
                         copyToClipboard()
                     } label: {
@@ -77,11 +79,27 @@ public struct MessageView: View {
                         .foregroundStyle(showCopied ? .green : .secondary)
                     }
                     .buttonStyle(.plain)
-                    .padding(.leading, 44) // Align with message content (icon width + spacing)
+
+                    Button {
+                        saveToNotes()
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: showSaved ? "checkmark" : "note.text")
+                                .font(.caption)
+                            Text(showSaved ? "Saved!" : "Notes")
+                                .font(.caption)
+                        }
+                        .foregroundStyle(showSaved ? .green : .secondary)
+                    }
+                    .buttonStyle(.plain)
                 }
+                .padding(.leading, 44) // Align with message content (icon width + spacing)
             }
         }
         .frame(maxWidth: .infinity, alignment: message.role == .user ? .trailing : .leading)
+        .sheet(isPresented: $showShareSheet) {
+            ShareSheet(items: [message.content])
+        }
     }
 
     private func copyToClipboard() {
@@ -98,6 +116,25 @@ public struct MessageView: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
             withAnimation {
                 showCopied = false
+            }
+        }
+    }
+
+    private func saveToNotes() {
+        // Haptic feedback
+        if appState.hapticsEnabled {
+            HapticService.shared.success()
+        }
+
+        // Open share sheet which includes Notes as an option
+        showShareSheet = true
+
+        withAnimation {
+            showSaved = true
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+            withAnimation {
+                showSaved = false
             }
         }
     }

@@ -38,10 +38,31 @@ public struct SettingsView: View {
                     get: { appState.autoSaveChats },
                     set: { appState.setAutoSaveChats($0) }
                 ))
+
+                HStack {
+                    Text("Auto-Delete After")
+                    Spacer()
+                    Menu {
+                        Button("Never") { appState.setAutoDeleteDays(0) }
+                        Button("7 Days") { appState.setAutoDeleteDays(7) }
+                        Button("14 Days") { appState.setAutoDeleteDays(14) }
+                        Button("30 Days") { appState.setAutoDeleteDays(30) }
+                        Button("60 Days") { appState.setAutoDeleteDays(60) }
+                        Button("90 Days") { appState.setAutoDeleteDays(90) }
+                    } label: {
+                        HStack(spacing: 4) {
+                            Text(autoDeleteLabel)
+                                .foregroundStyle(.primary)
+                            Image(systemName: "chevron.up.chevron.down")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
             } header: {
                 Text("Chat History")
             } footer: {
-                Text("When disabled, conversations will not be saved after you close the app.")
+                Text(autoDeleteFooter)
             }
 
             Section {
@@ -76,10 +97,15 @@ public struct SettingsView: View {
                     get: { appState.hapticsEnabled },
                     set: { appState.setHapticsEnabled($0) }
                 ))
+
+                Toggle("Show Follow-Up Questions", isOn: Binding(
+                    get: { appState.showFollowUpQuestions },
+                    set: { appState.setShowFollowUpQuestions($0) }
+                ))
             } header: {
                 Text("Feedback")
             } footer: {
-                Text("Provides tactile feedback for actions like sending messages and copying text.")
+                Text("Haptics provide tactile feedback. Follow-up questions suggest related queries after each response.")
             }
 
             Section {
@@ -128,7 +154,7 @@ public struct SettingsView: View {
                     }
                 }
 
-                Link(destination: URL(string: "https://deepknow.ai/richard")!) {
+                Link(destination: URL(string: "https://deepneuro.ai/richard")!) {
                     HStack {
                         Text("Developed by Richard Young")
                         Spacer()
@@ -168,6 +194,22 @@ public struct SettingsView: View {
         case 1: return "A⁺¹"
         case 2: return "A⁺²"
         default: return "A"
+        }
+    }
+
+    private var autoDeleteLabel: String {
+        switch appState.autoDeleteDays {
+        case 0: return "Never"
+        case 1: return "1 Day"
+        default: return "\(appState.autoDeleteDays) Days"
+        }
+    }
+
+    private var autoDeleteFooter: String {
+        if appState.autoDeleteDays == 0 {
+            return "Conversations will be kept indefinitely."
+        } else {
+            return "Conversations older than \(appState.autoDeleteDays) days will be automatically deleted."
         }
     }
 }

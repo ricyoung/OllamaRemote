@@ -9,6 +9,8 @@ public struct ChatView: View {
     @State private var chatService = ChatService()
     @State private var inputText = ""
     @State private var showShareSheet = false
+    @State private var followUpQuestions: [String] = []
+    @State private var isGeneratingFollowUps = false
     @FocusState private var isInputFocused: Bool
 
     public init(conversation: Conversation) {
@@ -126,13 +128,54 @@ public struct ChatView: View {
                         MessageView(message: message)
                             .id(message.id)
                     }
+
+                    // Follow-up questions
+                    if appState.showFollowUpQuestions && !followUpQuestions.isEmpty && !chatService.isStreaming {
+                        followUpQuestionsView
+                            .id("followups")
+                    }
                 }
                 .padding()
             }
             .onChange(of: conversation.messages.count) { _, _ in
                 scrollToBottom(proxy: proxy)
             }
+            .onChange(of: followUpQuestions) { _, _ in
+                scrollToBottom(proxy: proxy)
+            }
         }
+    }
+
+    @ViewBuilder
+    private var followUpQuestionsView: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Follow-up questions")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .padding(.leading, 4)
+
+            FlowLayout(spacing: 8) {
+                ForEach(followUpQuestions, id: \.self) { question in
+                    Button {
+                        inputText = question
+                        followUpQuestions = []
+                        isInputFocused = true
+                    } label: {
+                        Text(question)
+                            .font(.subheadline)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16))
+                            .overlay {
+                                RoundedRectangle(cornerRadius: 16)
+                                    .strokeBorder(Color.accentColor.opacity(0.3), lineWidth: 1)
+                            }
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+        .padding(.top, 8)
     }
 
     private func scrollToBottom(proxy: ScrollViewProxy) {
@@ -150,6 +193,7 @@ public struct ChatView: View {
               let modelId = appState.selectedModelId else { return }
 
         inputText = ""
+        followUpQuestions = [] // Clear previous follow-ups
 
         // Haptic feedback
         if appState.hapticsEnabled {
@@ -169,7 +213,57 @@ public struct ChatView: View {
                 using: config,
                 model: modelId
             ) { _ in }
+
+            // Generate follow-up questions after response completes
+            if appState.showFollowUpQuestions {
+                await generateFollowUpQuestions(config: config, modelId: modelId)
+            }
         }
+    }
+
+    private func generateFollowUpQuestions(config: AnyProviderConfiguration, modelId: String) async {
+        guard let lastAssistantMessage = conversation.sortedMessages.last,
+              lastAssistantMessage.role == .assistant,
+              !lastAssistantMessage.content.isEmpty else { return }
+
+        isGeneratingFollowUps = true
+
+        // Build a prompt to generate follow-up questions
+        let followUpPrompt = """
+        Based on this conversation, suggest exactly 3 brief follow-up questions the user might ask next.
+        Return ONLY the 3 questions, one per line, without numbering or bullets.
+        Keep each question under 50 characters.
+        """
+
+        var contextMessages = conversation.sortedMessages.suffix(4).map { msg in
+            ChatRequest.ChatMessage(role: msg.role.rawValue, content: msg.content)
+        }
+        contextMessages.append(ChatRequest.ChatMessage(role: "user", content: followUpPrompt))
+
+        let request = ChatRequest(
+            model: modelId,
+            messages: contextMessages,
+            stream: false
+        )
+
+        let provider = ProviderFactory.shared.provider(for: config)
+
+        do {
+            let response = try await provider.chat(request: request)
+            let questions = response.content
+                .components(separatedBy: CharacterSet.newlines)
+                .map { $0.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines) }
+                .filter { !$0.isEmpty && $0.count < 100 }
+                .prefix(3)
+
+            await MainActor.run {
+                followUpQuestions = Array(questions)
+            }
+        } catch {
+            // Silently fail - follow-ups are optional
+        }
+
+        isGeneratingFollowUps = false
     }
 
     private func cancelStream() {

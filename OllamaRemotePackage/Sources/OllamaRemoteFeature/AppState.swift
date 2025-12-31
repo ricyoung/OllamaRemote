@@ -15,6 +15,8 @@ public final class AppState {
     public var pendingMessage: String?
     public var fontSizeOffset: Int = 0 // -2 to +2
     public var hapticsEnabled: Bool = true
+    public var showFollowUpQuestions: Bool = true
+    public var autoDeleteDays: Int = 30 // 0 = never delete
 
     private let settingsStore: SettingsStore
     private let providerFactory: ProviderFactory
@@ -42,6 +44,8 @@ public final class AppState {
         autoSaveChats = settingsStore.loadAutoSaveChats()
         fontSizeOffset = settingsStore.loadFontSizeOffset()
         hapticsEnabled = settingsStore.loadHapticsEnabled()
+        showFollowUpQuestions = settingsStore.loadShowFollowUpQuestions()
+        autoDeleteDays = settingsStore.loadAutoDeleteDays()
     }
 
     public func loadConfigurations() {
@@ -117,5 +121,15 @@ public final class AppState {
     public func setHapticsEnabled(_ enabled: Bool) {
         hapticsEnabled = enabled
         settingsStore.saveHapticsEnabled(enabled)
+    }
+
+    public func setShowFollowUpQuestions(_ enabled: Bool) {
+        showFollowUpQuestions = enabled
+        settingsStore.saveShowFollowUpQuestions(enabled)
+    }
+
+    public func setAutoDeleteDays(_ days: Int) {
+        autoDeleteDays = max(0, days)
+        settingsStore.saveAutoDeleteDays(autoDeleteDays)
     }
 }

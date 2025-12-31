@@ -13,6 +13,8 @@ public final class SettingsStore: @unchecked Sendable {
         static let autoSaveChats = "autoSaveChats"
         static let fontSizeOffset = "fontSizeOffset"
         static let hapticsEnabled = "hapticsEnabled"
+        static let showFollowUpQuestions = "showFollowUpQuestions"
+        static let autoDeleteDays = "autoDeleteDays"
     }
 
     private init() {}
@@ -79,6 +81,30 @@ public final class SettingsStore: @unchecked Sendable {
 
     public func saveHapticsEnabled(_ enabled: Bool) {
         defaults.set(enabled, forKey: Keys.hapticsEnabled)
+    }
+
+    public func loadShowFollowUpQuestions() -> Bool {
+        // Default to true if not set
+        if defaults.object(forKey: Keys.showFollowUpQuestions) == nil {
+            return true
+        }
+        return defaults.bool(forKey: Keys.showFollowUpQuestions)
+    }
+
+    public func saveShowFollowUpQuestions(_ enabled: Bool) {
+        defaults.set(enabled, forKey: Keys.showFollowUpQuestions)
+    }
+
+    public func loadAutoDeleteDays() -> Int {
+        // Default to 30 days if not set, 0 means never delete
+        if defaults.object(forKey: Keys.autoDeleteDays) == nil {
+            return 30
+        }
+        return defaults.integer(forKey: Keys.autoDeleteDays)
+    }
+
+    public func saveAutoDeleteDays(_ days: Int) {
+        defaults.set(days, forKey: Keys.autoDeleteDays)
     }
 
     private func defaultConfigurations() -> [AnyProviderConfiguration] {

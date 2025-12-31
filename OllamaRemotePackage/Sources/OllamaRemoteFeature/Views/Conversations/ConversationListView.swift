@@ -98,6 +98,9 @@ public struct ConversationListView: View {
             }
         }
         .environment(\.editMode, $editMode)
+        .onAppear {
+            cleanupOldConversations()
+        }
         .alert("Rename Conversation", isPresented: .init(
             get: { conversationToRename != nil },
             set: { if !$0 { conversationToRename = nil } }
@@ -183,5 +186,18 @@ public struct ConversationListView: View {
             appState.selectedConversation = nil
         }
         modelContext.delete(conversation)
+    }
+
+    private func cleanupOldConversations() {
+        let days = appState.autoDeleteDays
+        guard days > 0 else { return } // 0 means never delete
+
+        let cutoffDate = Calendar.current.date(byAdding: .day, value: -days, to: Date()) ?? Date()
+
+        for conversation in conversations {
+            if conversation.updatedAt < cutoffDate {
+                deleteConversation(conversation)
+            }
+        }
     }
 }
