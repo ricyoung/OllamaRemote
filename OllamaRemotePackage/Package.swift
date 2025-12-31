@@ -13,11 +13,17 @@ let package = Package(
             targets: ["OllamaRemoteFeature"]
         ),
     ],
+    dependencies: [
+        .package(url: "https://github.com/LiYanan2004/MarkdownView.git", branch: "main"),
+    ],
     targets: [
         // Targets are the basic building blocks of a package, defining a module or a test suite.
         // Targets can depend on other targets in this package and products from dependencies.
         .target(
-            name: "OllamaRemoteFeature"
+            name: "OllamaRemoteFeature",
+            dependencies: [
+                .product(name: "MarkdownView", package: "MarkdownView"),
+            ]
         ),
         .testTarget(
             name: "OllamaRemoteFeatureTests",

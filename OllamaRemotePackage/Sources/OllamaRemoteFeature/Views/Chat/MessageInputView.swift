@@ -9,6 +9,7 @@ public struct MessageInputView: View {
 
     @State private var isPressed = false
     @State private var showMicHint = false
+    @State private var rainbowPhase: CGFloat = 0
 
     public init(
         text: Binding<String>,
@@ -113,6 +114,7 @@ public struct MessageInputView: View {
             }
             .disabled(!isStreaming && !canSend)
             .buttonStyle(.plain)
+            .hoverEffect(.lift)
             .simultaneousGesture(
                 DragGesture(minimumDistance: 0)
                     .onChanged { _ in isPressed = true }
@@ -123,6 +125,45 @@ public struct MessageInputView: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
         .background(.bar)
+        .overlay(alignment: .bottom) {
+            // Subtle rainbow animation at the bottom
+            RainbowGradient(phase: rainbowPhase)
+                .frame(height: 2)
+                .opacity(0.6)
+        }
+        .onAppear {
+            withAnimation(.linear(duration: 4).repeatForever(autoreverses: false)) {
+                rainbowPhase = 1
+            }
+        }
         .animation(.easeInOut(duration: 0.2), value: showMicHint)
+    }
+}
+
+// MARK: - Rainbow Gradient
+
+private struct RainbowGradient: View {
+    let phase: CGFloat
+
+    private var colors: [Color] {
+        [
+            .red.opacity(0.8),
+            .orange.opacity(0.8),
+            .yellow.opacity(0.8),
+            .green.opacity(0.8),
+            .cyan.opacity(0.8),
+            .blue.opacity(0.8),
+            .purple.opacity(0.8),
+            .red.opacity(0.8)
+        ]
+    }
+
+    var body: some View {
+        LinearGradient(
+            colors: colors,
+            startPoint: UnitPoint(x: -0.5 + phase, y: 0.5),
+            endPoint: UnitPoint(x: 0.5 + phase, y: 0.5)
+        )
+        .blur(radius: 1)
     }
 }

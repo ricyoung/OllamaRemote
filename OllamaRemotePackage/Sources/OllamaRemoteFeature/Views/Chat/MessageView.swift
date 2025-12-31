@@ -56,6 +56,30 @@ public struct MessageView: View {
                         )
                 }
                 .shadow(color: .black.opacity(0.04), radius: 4, y: 2)
+                .contextMenu {
+                    Button {
+                        UIPasteboard.general.string = message.content
+                        if appState.hapticsEnabled {
+                            HapticService.shared.success()
+                        }
+                    } label: {
+                        Label("Copy", systemImage: "doc.on.doc")
+                    }
+
+                    Button {
+                        showShareSheet = true
+                    } label: {
+                        Label("Share", systemImage: "square.and.arrow.up")
+                    }
+
+                    if message.role == .user {
+                        Button {
+                            UIPasteboard.general.string = message.content
+                        } label: {
+                            Label("Copy as Prompt", systemImage: "text.quote")
+                        }
+                    }
+                }
 
                 if message.role == .user {
                     Image(systemName: "person.circle.fill")

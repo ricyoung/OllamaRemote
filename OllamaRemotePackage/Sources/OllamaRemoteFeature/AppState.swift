@@ -19,6 +19,7 @@ public final class AppState {
     public var autoDeleteDays: Int = 30 // 0 = never delete
     public var defaultModelIds: [String: String] = [:] // providerId -> modelId
     public var configuredProviderIds: Set<String> = [] // providers with API keys set
+    public var showInspector: Bool = false // iPad inspector panel
 
     private let settingsStore: SettingsStore
     private let providerFactory: ProviderFactory

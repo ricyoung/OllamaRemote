@@ -1,27 +1,23 @@
 import SwiftUI
+import MarkdownView
 
 public struct MarkdownTextView: View {
     let content: String
     @Environment(AppState.self) private var appState
+    @Environment(\.colorScheme) private var colorScheme
 
     public init(content: String) {
         self.content = content
     }
 
     public var body: some View {
-        Text(attributedContent)
+        MarkdownView(content)
             .font(.system(size: baseFontSize + CGFloat(appState.fontSizeOffset * 2)))
+            .tint(.accentColor)
             .textSelection(.enabled)
     }
 
     private var baseFontSize: CGFloat {
         17 // Default iOS body font size
-    }
-
-    private var attributedContent: AttributedString {
-        (try? AttributedString(
-            markdown: content,
-            options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace)
-        )) ?? AttributedString(content)
     }
 }

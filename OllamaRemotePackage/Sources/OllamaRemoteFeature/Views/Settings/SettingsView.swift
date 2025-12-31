@@ -168,7 +168,7 @@ public struct SettingsView: View {
                 HStack {
                     Text("Version")
                     Spacer()
-                    Text("1.3.5")
+                    Text("1.4.0")
                         .foregroundStyle(.secondary)
                 }
 
@@ -189,6 +189,42 @@ public struct SettingsView: View {
                             .foregroundStyle(.secondary)
                     }
                 }
+            }
+
+            Section {
+                acknowledgementLink(
+                    name: "Ollama",
+                    description: "Local LLM inference engine",
+                    url: "https://ollama.com"
+                )
+
+                acknowledgementLink(
+                    name: "OpenRouter",
+                    description: "Unified API for LLMs",
+                    url: "https://openrouter.ai"
+                )
+
+                acknowledgementLink(
+                    name: "MarkdownView",
+                    description: "Markdown rendering for SwiftUI",
+                    url: "https://github.com/LiYanan2004/MarkdownView"
+                )
+
+                acknowledgementLink(
+                    name: "Highlightr",
+                    description: "Code syntax highlighting",
+                    url: "https://github.com/raspu/Highlightr"
+                )
+
+                acknowledgementLink(
+                    name: "swift-markdown",
+                    description: "Apple's Markdown parser",
+                    url: "https://github.com/apple/swift-markdown"
+                )
+            } header: {
+                Text("Acknowledgements")
+            } footer: {
+                Text("OllamaRemote is built with amazing open source software. Thank you to all contributors!")
             }
         }
         .navigationTitle("Settings")
@@ -237,6 +273,24 @@ public struct SettingsView: View {
             return "Conversations will be kept indefinitely."
         } else {
             return "Conversations older than \(appState.autoDeleteDays) days will be automatically deleted."
+        }
+    }
+
+    @ViewBuilder
+    private func acknowledgementLink(name: String, description: String, url: String) -> some View {
+        Link(destination: URL(string: url)!) {
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(name)
+                        .font(.body)
+                    Text(description)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+                Image(systemName: "arrow.up.right.square")
+                    .foregroundStyle(.secondary)
+            }
         }
     }
 }

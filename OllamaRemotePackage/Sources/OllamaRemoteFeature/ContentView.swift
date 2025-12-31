@@ -5,6 +5,8 @@ public struct ContentView: View {
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var appState = AppState()
     @State private var showSplash = true
+    @State private var iPhonePath = NavigationPath()
+    @State private var columnVisibility: NavigationSplitViewVisibility = .all
 
     public init() {}
 
@@ -36,11 +38,16 @@ public struct ContentView: View {
 
     @ViewBuilder
     private var iPadLayout: some View {
-        NavigationSplitView {
+        @Bindable var state = appState
+        NavigationSplitView(columnVisibility: $columnVisibility) {
             ConversationListView()
         } detail: {
             if let conversation = appState.selectedConversation {
                 ChatView(conversation: conversation)
+                    .inspector(isPresented: $state.showInspector) {
+                        InspectorView(conversation: conversation)
+                            .inspectorColumnWidth(min: 280, ideal: 320, max: 400)
+                    }
             } else {
                 ContentUnavailableView(
                     "No Conversation Selected",
@@ -53,8 +60,16 @@ public struct ContentView: View {
 
     @ViewBuilder
     private var iPhoneLayout: some View {
-        NavigationStack {
+        NavigationStack(path: $iPhonePath) {
             ConversationListView()
+        }
+        .onChange(of: appState.selectedConversation) { oldValue, newValue in
+            // Auto-navigate to new conversation on iPhone
+            if let conversation = newValue, oldValue?.id != conversation.id {
+                // Clear existing path and navigate to new conversation
+                iPhonePath = NavigationPath()
+                iPhonePath.append(conversation)
+            }
         }
     }
 }

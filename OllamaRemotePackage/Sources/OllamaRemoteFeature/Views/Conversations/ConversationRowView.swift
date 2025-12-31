@@ -64,6 +64,8 @@ public struct ConversationRowView: View {
                 appeared = true
             }
         }
+        .contentShape(RoundedRectangle(cornerRadius: 12))
+        .hoverEffect(.highlight)
     }
 
     @ViewBuilder

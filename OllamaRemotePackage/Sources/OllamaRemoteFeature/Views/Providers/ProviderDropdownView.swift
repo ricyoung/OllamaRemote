@@ -78,6 +78,7 @@ public struct ProviderDropdownView: View {
             .shadow(color: providerColor.opacity(0.15), radius: 8, y: 4)
             .scaleEffect(isPressed ? 0.95 : 1.0)
             .animation(.easeInOut(duration: 0.1), value: isPressed)
+            .hoverEffect(.lift)
         }
         .simultaneousGesture(
             DragGesture(minimumDistance: 0)

@@ -50,6 +50,13 @@ public struct ChatView: View {
         .sheet(isPresented: $showShareSheet) {
             ShareSheet(items: [exportConversation()])
         }
+        .onKeyPress(.escape) {
+            if chatService.isStreaming {
+                cancelStream()
+                return .handled
+            }
+            return .ignored
+        }
         .task {
             await appState.loadModels()
             await handlePendingMessage()
@@ -131,7 +138,22 @@ public struct ChatView: View {
                     .padding(.horizontal, 12)
                     .padding(.vertical, 8)
                     .background(.ultraThinMaterial, in: Capsule())
+                    .hoverEffect(.lift)
                 }
+            }
+
+            // Inspector toggle button
+            Button {
+                withAnimation {
+                    appState.showInspector.toggle()
+                }
+            } label: {
+                Image(systemName: appState.showInspector ? "sidebar.trailing.badge.arrow.right" : "sidebar.trailing")
+                    .font(.title3)
+                    .foregroundStyle(.secondary)
+                    .frame(width: 36, height: 36)
+                    .background(.ultraThinMaterial, in: Circle())
+                    .hoverEffect(.lift)
             }
         }
         .padding(.horizontal, 16)
@@ -200,6 +222,7 @@ public struct ChatView: View {
                                 RoundedRectangle(cornerRadius: 16)
                                     .strokeBorder(Color.accentColor.opacity(0.3), lineWidth: 1)
                             }
+                            .hoverEffect(.lift)
                     }
                     .buttonStyle(.plain)
                 }
