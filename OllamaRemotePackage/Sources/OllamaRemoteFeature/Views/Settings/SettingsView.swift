@@ -191,7 +191,7 @@ public struct SettingsView: View {
                 }
             }
 
-            Section {
+            Section("LLM Providers") {
                 acknowledgementLink(
                     name: "Ollama",
                     description: "Local LLM inference engine",
@@ -203,7 +203,61 @@ public struct SettingsView: View {
                     description: "Unified API for LLMs",
                     url: "https://openrouter.ai"
                 )
+            }
 
+            Section("On-Device Inference") {
+                acknowledgementLink(
+                    name: "llama.cpp",
+                    description: "GGUF model inference by Georgi Gerganov",
+                    url: "https://github.com/ggerganov/llama.cpp"
+                )
+
+                acknowledgementLink(
+                    name: "MLX",
+                    description: "Apple's array framework for ML",
+                    url: "https://github.com/ml-explore/mlx"
+                )
+
+                acknowledgementLink(
+                    name: "Core ML",
+                    description: "Apple's on-device machine learning",
+                    url: "https://developer.apple.com/documentation/coreml"
+                )
+
+                acknowledgementLink(
+                    name: "Metal",
+                    description: "Apple's GPU acceleration framework",
+                    url: "https://developer.apple.com/metal/"
+                )
+            }
+
+            Section("Open Source Models") {
+                acknowledgementLink(
+                    name: "OpenELM",
+                    description: "Apple's efficient language models",
+                    url: "https://github.com/apple/corenet"
+                )
+
+                acknowledgementLink(
+                    name: "Qwen",
+                    description: "Alibaba's multilingual models",
+                    url: "https://github.com/QwenLM/Qwen"
+                )
+
+                acknowledgementLink(
+                    name: "SmolLM",
+                    description: "Hugging Face's compact models",
+                    url: "https://huggingface.co/HuggingFaceTB/SmolLM-135M"
+                )
+
+                acknowledgementLink(
+                    name: "TinyLlama",
+                    description: "Compact 1.1B parameter model",
+                    url: "https://github.com/jzhang38/TinyLlama"
+                )
+            }
+
+            Section {
                 acknowledgementLink(
                     name: "MarkdownView",
                     description: "Markdown rendering for SwiftUI",
@@ -222,7 +276,7 @@ public struct SettingsView: View {
                     url: "https://github.com/apple/swift-markdown"
                 )
             } header: {
-                Text("Acknowledgements")
+                Text("Libraries")
             } footer: {
                 Text("OllamaRemote is built with amazing open source software. Thank you to all contributors!")
             }
