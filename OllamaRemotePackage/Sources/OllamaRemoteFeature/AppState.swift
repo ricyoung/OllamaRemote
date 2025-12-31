@@ -17,12 +17,34 @@ public final class AppState {
     public var hapticsEnabled: Bool = true
     public var showFollowUpQuestions: Bool = true
     public var autoDeleteDays: Int = 30 // 0 = never delete
+    public var defaultModelIds: [String: String] = [:] // providerId -> modelId
+    public var configuredProviderIds: Set<String> = [] // providers with API keys set
 
     private let settingsStore: SettingsStore
     private let providerFactory: ProviderFactory
 
     public var enabledProviders: [AnyProviderConfiguration] {
         providerConfigurations.filter { $0.isEnabled }
+    }
+
+    /// Providers that are enabled AND properly configured (have API keys or don't need them)
+    public var readyProviders: [AnyProviderConfiguration] {
+        enabledProviders.filter { isProviderConfigured($0) }
+    }
+
+    /// Check if a provider is properly configured to be used
+    public func isProviderConfigured(_ config: AnyProviderConfiguration) -> Bool {
+        switch config.type {
+        case .localOllama:
+            // Local Ollama is always ready (uses default host/port)
+            return true
+        case .ollamaCloud, .openRouter:
+            // Cloud providers need API key
+            return configuredProviderIds.contains(config.id.uuidString)
+        case .onDevice:
+            // On-device needs at least one downloaded model
+            return !LocalModelManager.shared.downloadedModels.isEmpty
+        }
     }
 
     public var activeProvider: AnyProviderConfiguration? {
@@ -46,6 +68,8 @@ public final class AppState {
         hapticsEnabled = settingsStore.loadHapticsEnabled()
         showFollowUpQuestions = settingsStore.loadShowFollowUpQuestions()
         autoDeleteDays = settingsStore.loadAutoDeleteDays()
+        defaultModelIds = settingsStore.loadDefaultModelIds()
+        configuredProviderIds = settingsStore.loadConfiguredProviderIds()
     }
 
     public func loadConfigurations() {
@@ -67,7 +91,8 @@ public final class AppState {
 
     public func selectProvider(_ id: UUID) {
         selectedProviderId = id
-        selectedModelId = nil
+        // Use default model for this provider if set
+        selectedModelId = defaultModelIds[id.uuidString]
         availableModels = []
         saveConfigurations()
     }
@@ -81,7 +106,12 @@ public final class AppState {
         let provider = providerFactory.provider(for: config)
         do {
             availableModels = try await provider.fetchModels()
-            if selectedModelId == nil, let first = availableModels.first {
+            // Use default model for this provider, or first available
+            let providerId = config.id.uuidString
+            if let defaultId = defaultModelIds[providerId],
+               availableModels.contains(where: { $0.id == defaultId }) {
+                selectedModelId = defaultId
+            } else if selectedModelId == nil, let first = availableModels.first {
                 selectedModelId = first.id
             }
         } catch {
@@ -131,5 +161,33 @@ public final class AppState {
     public func setAutoDeleteDays(_ days: Int) {
         autoDeleteDays = max(0, days)
         settingsStore.saveAutoDeleteDays(autoDeleteDays)
+    }
+
+    // MARK: - Default Model per Provider
+
+    public func setDefaultModel(_ modelId: String?, for providerId: UUID) {
+        let key = providerId.uuidString
+        if let modelId {
+            defaultModelIds[key] = modelId
+        } else {
+            defaultModelIds.removeValue(forKey: key)
+        }
+        settingsStore.saveDefaultModelIds(defaultModelIds)
+    }
+
+    public func getDefaultModel(for providerId: UUID) -> String? {
+        defaultModelIds[providerId.uuidString]
+    }
+
+    // MARK: - Provider Configuration Status
+
+    public func markProviderConfigured(_ providerId: UUID) {
+        configuredProviderIds.insert(providerId.uuidString)
+        settingsStore.saveConfiguredProviderIds(configuredProviderIds)
+    }
+
+    public func markProviderUnconfigured(_ providerId: UUID) {
+        configuredProviderIds.remove(providerId.uuidString)
+        settingsStore.saveConfiguredProviderIds(configuredProviderIds)
     }
 }

@@ -15,6 +15,8 @@ public final class SettingsStore: @unchecked Sendable {
         static let hapticsEnabled = "hapticsEnabled"
         static let showFollowUpQuestions = "showFollowUpQuestions"
         static let autoDeleteDays = "autoDeleteDays"
+        static let defaultModelIds = "defaultModelIds"
+        static let configuredProviderIds = "configuredProviderIds"
     }
 
     private init() {}
@@ -105,6 +107,38 @@ public final class SettingsStore: @unchecked Sendable {
 
     public func saveAutoDeleteDays(_ days: Int) {
         defaults.set(days, forKey: Keys.autoDeleteDays)
+    }
+
+    // MARK: - Default Model per Provider
+
+    public func loadDefaultModelIds() -> [String: String] {
+        guard let data = defaults.data(forKey: Keys.defaultModelIds),
+              let dict = try? decoder.decode([String: String].self, from: data) else {
+            return [:]
+        }
+        return dict
+    }
+
+    public func saveDefaultModelIds(_ ids: [String: String]) {
+        if let data = try? encoder.encode(ids) {
+            defaults.set(data, forKey: Keys.defaultModelIds)
+        }
+    }
+
+    // MARK: - Configured Provider IDs
+
+    public func loadConfiguredProviderIds() -> Set<String> {
+        guard let data = defaults.data(forKey: Keys.configuredProviderIds),
+              let set = try? decoder.decode(Set<String>.self, from: data) else {
+            return []
+        }
+        return set
+    }
+
+    public func saveConfiguredProviderIds(_ ids: Set<String>) {
+        if let data = try? encoder.encode(ids) {
+            defaults.set(data, forKey: Keys.configuredProviderIds)
+        }
     }
 
     private func defaultConfigurations() -> [AnyProviderConfiguration] {

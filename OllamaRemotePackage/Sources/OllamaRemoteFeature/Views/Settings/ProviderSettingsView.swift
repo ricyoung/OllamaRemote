@@ -15,6 +15,9 @@ public struct ProviderSettingsView: View {
     @State private var isTesting = false
     @State private var testResult: TestResult?
     @State private var isApiKeyVisible = false
+    @State private var availableModels: [LLMModel] = []
+    @State private var isLoadingModels = false
+    @State private var selectedDefaultModelId: String?
 
     enum TestResult {
         case success
@@ -72,6 +75,37 @@ public struct ProviderSettingsView: View {
                         .foregroundStyle(.red)
                 }
             }
+
+            // Default model section (not for on-device)
+            if configuration.type != .onDevice {
+                Section {
+                    Button {
+                        Task { await loadAvailableModels() }
+                    } label: {
+                        HStack {
+                            Text("Load Models")
+                            Spacer()
+                            if isLoadingModels {
+                                ProgressView()
+                            }
+                        }
+                    }
+                    .disabled(isLoadingModels)
+
+                    if !availableModels.isEmpty {
+                        Picker("Default Model", selection: $selectedDefaultModelId) {
+                            Text("None").tag(nil as String?)
+                            ForEach(availableModels) { model in
+                                Text(model.name).tag(model.id as String?)
+                            }
+                        }
+                    }
+                } header: {
+                    Text("Default Model")
+                } footer: {
+                    Text("Set a default model to use when switching to this provider.")
+                }
+            }
         }
         .navigationTitle(configuration.type.displayName)
         .toolbar {
@@ -103,16 +137,24 @@ public struct ProviderSettingsView: View {
     @ViewBuilder
     private var cloudSection: some View {
         Section("Authentication") {
-            if isApiKeyVisible {
-                TextField("API Key", text: $apiKey)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-            } else {
-                SecureField("API Key", text: $apiKey)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
+            HStack {
+                if isApiKeyVisible {
+                    TextField("API Key", text: $apiKey)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                } else {
+                    SecureField("API Key", text: $apiKey)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                }
+                Button {
+                    isApiKeyVisible.toggle()
+                } label: {
+                    Image(systemName: isApiKeyVisible ? "eye.slash" : "eye")
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
             }
-            Toggle("Show API Key", isOn: $isApiKeyVisible)
         }
 
         Section {
@@ -129,16 +171,24 @@ public struct ProviderSettingsView: View {
     @ViewBuilder
     private var openRouterSection: some View {
         Section("Authentication") {
-            if isApiKeyVisible {
-                TextField("API Key", text: $apiKey)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-            } else {
-                SecureField("API Key", text: $apiKey)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
+            HStack {
+                if isApiKeyVisible {
+                    TextField("API Key", text: $apiKey)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                } else {
+                    SecureField("API Key", text: $apiKey)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                }
+                Button {
+                    isApiKeyVisible.toggle()
+                } label: {
+                    Image(systemName: isApiKeyVisible ? "eye.slash" : "eye")
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
             }
-            Toggle("Show API Key", isOn: $isApiKeyVisible)
         }
 
         Section("Options") {
@@ -203,6 +253,7 @@ public struct ProviderSettingsView: View {
     private func loadConfiguration() {
         displayName = configuration.displayName
         isEnabled = configuration.isEnabled
+        selectedDefaultModelId = appState.getDefaultModel(for: configuration.id)
 
         switch configuration {
         case .local(let config):
@@ -226,6 +277,45 @@ public struct ProviderSettingsView: View {
         }
     }
 
+    private func loadAvailableModels() async {
+        isLoadingModels = true
+
+        // Build config from current form values for accurate test
+        var testConfig: AnyProviderConfiguration
+        switch configuration {
+        case .local(var config):
+            config.host = host
+            config.port = Int(port) ?? 11434
+            testConfig = .local(config)
+
+        case .cloud(let config):
+            if !apiKey.isEmpty {
+                try? await KeychainService.shared.store(key: config.apiKeyReference, value: apiKey)
+            }
+            testConfig = .cloud(config)
+
+        case .openRouter(let config):
+            if !apiKey.isEmpty {
+                try? await KeychainService.shared.store(key: config.apiKeyReference, value: apiKey)
+            }
+            testConfig = .openRouter(config)
+
+        case .onDevice:
+            testConfig = configuration
+        }
+
+        ProviderFactory.shared.clearCache()
+        let provider = ProviderFactory.shared.provider(for: testConfig)
+
+        do {
+            availableModels = try await provider.fetchModels()
+        } catch {
+            availableModels = []
+        }
+
+        isLoadingModels = false
+    }
+
     private func save() {
         var updatedConfig: AnyProviderConfiguration
 
@@ -243,6 +333,12 @@ public struct ProviderSettingsView: View {
             updatedConfig = .cloud(config)
             Task {
                 try? await KeychainService.shared.store(key: config.apiKeyReference, value: apiKey)
+                // Mark as configured if API key is set
+                if !apiKey.isEmpty {
+                    await MainActor.run { appState.markProviderConfigured(config.id) }
+                } else {
+                    await MainActor.run { appState.markProviderUnconfigured(config.id) }
+                }
             }
 
         case .openRouter(var config):
@@ -252,6 +348,12 @@ public struct ProviderSettingsView: View {
             updatedConfig = .openRouter(config)
             Task {
                 try? await KeychainService.shared.store(key: config.apiKeyReference, value: apiKey)
+                // Mark as configured if API key is set
+                if !apiKey.isEmpty {
+                    await MainActor.run { appState.markProviderConfigured(config.id) }
+                } else {
+                    await MainActor.run { appState.markProviderUnconfigured(config.id) }
+                }
             }
 
         case .onDevice(var config):
@@ -261,6 +363,10 @@ public struct ProviderSettingsView: View {
         }
 
         appState.updateProviderConfiguration(updatedConfig)
+
+        // Save default model selection
+        appState.setDefaultModel(selectedDefaultModelId, for: configuration.id)
+
         dismiss()
     }
 

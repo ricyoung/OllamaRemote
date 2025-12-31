@@ -6,6 +6,8 @@ public struct MessageView: View {
     @State private var showCopied = false
     @State private var showSaved = false
     @State private var showShareSheet = false
+    @State private var appeared = false
+    @State private var buttonPressed: String? = nil
 
     public init(message: Message) {
         self.message = message
@@ -23,8 +25,7 @@ public struct MessageView: View {
 
                 VStack(alignment: message.role == .user ? .trailing : .leading, spacing: 4) {
                     if message.isStreaming && message.content.isEmpty {
-                        ProgressView()
-                            .padding(8)
+                        TypingIndicatorView()
                     } else if message.isStreaming {
                         HStack(alignment: .bottom, spacing: 2) {
                             MarkdownTextView(content: message.content)
@@ -63,54 +64,64 @@ public struct MessageView: View {
                         .symbolRenderingMode(.hierarchical)
                 }
             }
+            // Entrance animation
+            .opacity(appeared ? 1 : 0)
+            .offset(x: appeared ? 0 : (message.role == .user ? 20 : -20))
 
             // Action buttons below the message for assistant
             if message.role == .assistant && !message.isStreaming && !message.content.isEmpty {
                 HStack(spacing: 16) {
-                    Button {
+                    ActionButton(
+                        icon: showCopied ? "checkmark" : "doc.on.doc",
+                        text: showCopied ? "Copied!" : "Copy",
+                        isActive: showCopied,
+                        isPressed: buttonPressed == "copy"
+                    ) {
                         copyToClipboard()
-                    } label: {
-                        HStack(spacing: 4) {
-                            Image(systemName: showCopied ? "checkmark" : "doc.on.doc")
-                                .font(.caption)
-                            Text(showCopied ? "Copied!" : "Copy")
-                                .font(.caption)
-                        }
-                        .foregroundStyle(showCopied ? .green : .secondary)
                     }
-                    .buttonStyle(.plain)
+                    .simultaneousGesture(
+                        DragGesture(minimumDistance: 0)
+                            .onChanged { _ in buttonPressed = "copy" }
+                            .onEnded { _ in buttonPressed = nil }
+                    )
 
-                    Button {
+                    ActionButton(
+                        icon: showSaved ? "checkmark" : "note.text",
+                        text: showSaved ? "Saved!" : "Notes",
+                        isActive: showSaved,
+                        isPressed: buttonPressed == "notes"
+                    ) {
                         saveToNotes()
-                    } label: {
-                        HStack(spacing: 4) {
-                            Image(systemName: showSaved ? "checkmark" : "note.text")
-                                .font(.caption)
-                            Text(showSaved ? "Saved!" : "Notes")
-                                .font(.caption)
-                        }
-                        .foregroundStyle(showSaved ? .green : .secondary)
                     }
-                    .buttonStyle(.plain)
+                    .simultaneousGesture(
+                        DragGesture(minimumDistance: 0)
+                            .onChanged { _ in buttonPressed = "notes" }
+                            .onEnded { _ in buttonPressed = nil }
+                    )
                 }
-                .padding(.leading, 44) // Align with message content (icon width + spacing)
+                .padding(.leading, 44)
+                .opacity(appeared ? 1 : 0)
             }
         }
         .frame(maxWidth: .infinity, alignment: message.role == .user ? .trailing : .leading)
         .sheet(isPresented: $showShareSheet) {
             ShareSheet(items: [message.content])
         }
+        .onAppear {
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                appeared = true
+            }
+        }
     }
 
     private func copyToClipboard() {
         UIPasteboard.general.string = message.content
 
-        // Haptic feedback
         if appState.hapticsEnabled {
             HapticService.shared.success()
         }
 
-        withAnimation {
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
             showCopied = true
         }
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
@@ -121,15 +132,13 @@ public struct MessageView: View {
     }
 
     private func saveToNotes() {
-        // Haptic feedback
         if appState.hapticsEnabled {
             HapticService.shared.success()
         }
 
-        // Open share sheet which includes Notes as an option
         showShareSheet = true
 
-        withAnimation {
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
             showSaved = true
         }
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
@@ -141,9 +150,83 @@ public struct MessageView: View {
 
     @ViewBuilder
     private var streamingCursor: some View {
+        BlinkingCursor()
+    }
+}
+
+// MARK: - Action Button
+
+private struct ActionButton: View {
+    let icon: String
+    let text: String
+    let isActive: Bool
+    let isPressed: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 4) {
+                Image(systemName: icon)
+                    .font(.caption)
+                    .contentTransition(.symbolEffect(.replace))
+                Text(text)
+                    .font(.caption)
+            }
+            .foregroundStyle(isActive ? .green : .secondary)
+            .scaleEffect(isPressed ? 0.9 : 1.0)
+            .animation(.easeInOut(duration: 0.1), value: isPressed)
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+// MARK: - Blinking Cursor
+
+private struct BlinkingCursor: View {
+    @State private var isVisible = true
+
+    var body: some View {
         Rectangle()
-            .fill(Color.primary)
+            .fill(Color.accentColor)
             .frame(width: 2, height: 16)
-            .opacity(0.7)
+            .opacity(isVisible ? 0.8 : 0.2)
+            .onAppear {
+                withAnimation(.easeInOut(duration: 0.5).repeatForever(autoreverses: true)) {
+                    isVisible.toggle()
+                }
+            }
+    }
+}
+
+// MARK: - Typing Indicator
+
+public struct TypingIndicatorView: View {
+    @State private var animationPhase = 0
+
+    public init() {}
+
+    public var body: some View {
+        HStack(spacing: 4) {
+            ForEach(0..<3, id: \.self) { index in
+                Circle()
+                    .fill(Color.accentColor)
+                    .frame(width: 8, height: 8)
+                    .scaleEffect(animationPhase == index ? 1.2 : 0.8)
+                    .opacity(animationPhase == index ? 1 : 0.5)
+            }
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 12)
+        .onAppear {
+            startAnimation()
+        }
+    }
+
+    private func startAnimation() {
+        Timer.scheduledTimer(withTimeInterval: 0.3, repeats: true) { _ in
+            withAnimation(.easeInOut(duration: 0.2)) {
+                animationPhase = (animationPhase + 1) % 3
+            }
+        }
     }
 }

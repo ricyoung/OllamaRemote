@@ -105,18 +105,48 @@ public struct ChatView: View {
                     .scaleEffect(0.8)
             } else if !appState.availableModels.isEmpty {
                 @Bindable var state = appState
-                Picker("Model", selection: $state.selectedModelId) {
+                Menu {
                     ForEach(appState.availableModels) { model in
-                        Text(model.name)
-                            .tag(model.id as String?)
+                        Button {
+                            state.selectedModelId = model.id
+                        } label: {
+                            if model.id == state.selectedModelId {
+                                Label(model.name, systemImage: "checkmark")
+                            } else {
+                                Text(model.name)
+                            }
+                        }
                     }
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "cube.fill")
+                            .font(.caption)
+                        Text(appState.availableModels.first { $0.id == state.selectedModelId }?.name ?? "Select Model")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                        Image(systemName: "chevron.up.chevron.down")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(.ultraThinMaterial, in: Capsule())
                 }
-                .pickerStyle(.menu)
             }
         }
-        .padding(.horizontal)
-        .padding(.vertical, 8)
-        .background(.bar)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .background {
+            Rectangle()
+                .fill(.ultraThinMaterial)
+                .overlay {
+                    LinearGradient(
+                        colors: [.clear, .accentColor.opacity(0.03)],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                }
+        }
     }
 
     @ViewBuilder
