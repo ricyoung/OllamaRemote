@@ -168,7 +168,7 @@ public struct SettingsView: View {
                 HStack {
                     Text("Version")
                     Spacer()
-                    Text("1.3.4")
+                    Text("1.3.5")
                         .foregroundStyle(.secondary)
                 }
 
