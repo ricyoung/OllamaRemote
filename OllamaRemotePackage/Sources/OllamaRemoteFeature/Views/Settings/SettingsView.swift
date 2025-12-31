@@ -13,6 +13,33 @@ public struct SettingsView: View {
         @Bindable var state = appState
 
         List {
+            Section {
+                NavigationLink {
+                    StatsView()
+                } label: {
+                    HStack {
+                        Image(systemName: "chart.bar.fill")
+                            .font(.title2)
+                            .foregroundStyle(.orange.gradient)
+                            .frame(width: 32)
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Your Stats")
+                                .font(.headline)
+                            Text("\(StatsService.shared.currentStreak) day streak")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+
+                        Spacer()
+
+                        Image(systemName: "flame.fill")
+                            .foregroundStyle(.orange)
+                    }
+                    .padding(.vertical, 4)
+                }
+            }
+
             Section("Providers") {
                 ForEach(appState.providerConfigurations) { config in
                     NavigationLink {

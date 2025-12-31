@@ -100,6 +100,7 @@ public struct ConversationListView: View {
         .environment(\.editMode, $editMode)
         .onAppear {
             cleanupOldConversations()
+            StatsService.shared.recordActivity()
         }
         .alert("Rename Conversation", isPresented: .init(
             get: { conversationToRename != nil },
