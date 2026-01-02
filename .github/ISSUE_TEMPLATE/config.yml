@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Discussions
+    url: https://github.com/ricyoung/OllamaRemote/discussions
+    about: Ask questions and discuss ideas with the community
+  - name: Ollama Documentation
+    url: https://ollama.com/docs
+    about: For help with Ollama setup and configuration
+  - name: OpenRouter Documentation
+    url: https://openrouter.ai/docs
+    about: For help with OpenRouter API

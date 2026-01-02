@@ -164,6 +164,44 @@ public struct SettingsView: View {
                 }
             }
 
+            Section("Support") {
+                Link(destination: URL(string: "https://github.com/ricyoung/OllamaRemote/issues/new?template=bug_report.md")!) {
+                    Label {
+                        Text("Report a Bug")
+                    } icon: {
+                        Image(systemName: "ladybug")
+                            .foregroundStyle(.red)
+                    }
+                }
+
+                Link(destination: URL(string: "https://github.com/ricyoung/OllamaRemote/issues/new?template=feature_request.md")!) {
+                    Label {
+                        Text("Request a Feature")
+                    } icon: {
+                        Image(systemName: "lightbulb")
+                            .foregroundStyle(.yellow)
+                    }
+                }
+
+                Link(destination: URL(string: "https://github.com/ricyoung/OllamaRemote/discussions")!) {
+                    Label {
+                        Text("Community Discussions")
+                    } icon: {
+                        Image(systemName: "bubble.left.and.bubble.right")
+                            .foregroundStyle(.blue)
+                    }
+                }
+
+                Link(destination: URL(string: "https://github.com/ricyoung/OllamaRemote/blob/main/PRIVACY_POLICY.md")!) {
+                    Label {
+                        Text("Privacy Policy")
+                    } icon: {
+                        Image(systemName: "hand.raised")
+                            .foregroundStyle(.purple)
+                    }
+                }
+            }
+
             Section("About") {
                 HStack {
                     Text("Version")
