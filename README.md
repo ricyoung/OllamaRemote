@@ -55,7 +55,16 @@ A modern iOS/iPadOS client for interacting with Large Language Models (LLMs) acr
 
 ## Screenshots
 
-*Coming soon*
+### iPhone
+<p align="center">
+  <img src="screenshots/iphone_conversations.png" alt="iPhone Conversations" width="300">
+  <img src="screenshots/01_chat_response.png" alt="iPhone Chat" width="300">
+</p>
+
+### iPad
+<p align="center">
+  <img src="screenshots/ipad_conversations.png" alt="iPad Split View" width="600">
+</p>
 
 ## Installation
 
