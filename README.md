@@ -2,7 +2,7 @@
 
 A modern iOS/iPadOS client for interacting with Large Language Models (LLMs) across multiple providers.
 
-**Version:** 1.3.3
+**Version:** 1.4.0
 **Platform:** iOS 18+ / iPadOS 18+
 **License:** GPL-3.0
 **Developer:** [Richard Young](https://deepknow.ai/richard)
@@ -10,10 +10,10 @@ A modern iOS/iPadOS client for interacting with Large Language Models (LLMs) acr
 ## Features
 
 ### Multi-Provider Support
-- **On-Device (Neural Engine)** - Run Core ML models locally using Apple's Neural Engine for maximum privacy and offline capability
 - **Local Ollama** - Connect to Ollama running on your local network (IP:port)
 - **Ollama Cloud** - Connect to Ollama's cloud service with API key
 - **OpenRouter** - Access 200+ models including free tiers from OpenAI, Anthropic, Google, Meta, and more
+- **On-Device** *(Coming Soon)* - Run Core ML models locally using Apple's Neural Engine
 
 ### Chat Experience
 - **Streaming Responses** - Real-time token streaming for responsive conversations
@@ -39,26 +39,19 @@ A modern iOS/iPadOS client for interacting with Large Language Models (LLMs) acr
 
 ### Security
 - **Keychain Storage** - API keys stored securely in iOS Keychain
-- **On-Device Option** - Complete privacy with local model inference
 - **No Telemetry** - Your conversations stay on your device
 
-## On-Device Models
+## On-Device Models (Coming Soon)
 
-Download and run models completely offline using Apple's Neural Engine:
+> **Note:** On-device inference with Core ML and Neural Engine is coming in a future update. The models listed below will be available for download once this feature is released.
 
-### Core ML Models (Neural Engine)
+### Planned Core ML Models (Neural Engine)
 | Model | Size | Parameters |
 |-------|------|------------|
 | Apple OpenELM 270M | 270 MB | 270M |
 | Apple OpenELM 450M | 450 MB | 450M |
 | Apple OpenELM 1.1B | 1.1 GB | 1.1B |
 | SmolLM 135M (Fastest) | 135 MB | 135M |
-
-### GGUF Models (Metal GPU)
-| Model | Size | Parameters |
-|-------|------|------------|
-| Qwen2 0.5B | 395 MB | 0.5B |
-| TinyLlama 1.1B | 637 MB | 1.1B |
 
 ## Screenshots
 
@@ -102,12 +95,6 @@ open OllamaRemote.xcworkspace
 4. Enter your API key
 5. Enable "Prefer Free Models" for cost-free usage
 
-### On-Device Setup
-1. Go to Settings > On-Device > Manage Local Models
-2. Download your preferred model(s)
-3. Select On-Device as your provider
-4. Chat completely offline!
-
 ## Project Architecture
 
 ```
@@ -137,7 +124,6 @@ OllamaRemote/
 - **SwiftData** - Persistent conversation storage
 - **@Observable** - State management (not ObservableObject)
 - **async/await** - Swift concurrency
-- **Core ML** - On-device neural network inference
 - **Keychain** - Secure credential storage
 
 ## Contributing
