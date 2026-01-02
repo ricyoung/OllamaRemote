@@ -1,12 +1,20 @@
 import Foundation
 
-public struct LocalOllamaConfig: ProviderConfiguration {
+public struct LocalOllamaConfig: ProviderConfiguration, Codable {
     public let id: UUID
-    public let type: ProviderType = .localOllama
+    public var type: ProviderType { .localOllama }
     public var displayName: String
     public var isEnabled: Bool
     public var host: String
     public var port: Int
+
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case displayName
+        case isEnabled
+        case host
+        case port
+    }
 
     public var baseURL: URL {
         URL(string: "http://\(host):\(port)")!
