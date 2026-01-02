@@ -1,10 +1,16 @@
 import Foundation
 
-public struct OllamaCloudConfig: ProviderConfiguration {
+public struct OllamaCloudConfig: ProviderConfiguration, Codable {
     public let id: UUID
-    public let type: ProviderType = .ollamaCloud
+    public var type: ProviderType { .ollamaCloud }
     public var displayName: String
     public var isEnabled: Bool
+
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case displayName
+        case isEnabled
+    }
 
     public var baseURL: URL {
         URL(string: "https://ollama.com")!

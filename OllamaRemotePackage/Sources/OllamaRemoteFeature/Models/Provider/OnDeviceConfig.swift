@@ -1,10 +1,16 @@
 import Foundation
 
-public struct OnDeviceConfig: ProviderConfiguration, Sendable {
+public struct OnDeviceConfig: ProviderConfiguration, Sendable, Codable {
     public var id: UUID
     public var displayName: String
     public var isEnabled: Bool
-    public let type: ProviderType = .onDevice
+    public var type: ProviderType { .onDevice }
+
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case displayName
+        case isEnabled
+    }
 
     public var baseURL: URL {
         // Local file URL - not used for network
