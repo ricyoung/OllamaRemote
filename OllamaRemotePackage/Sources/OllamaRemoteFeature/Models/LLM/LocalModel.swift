@@ -113,6 +113,8 @@ extension LocalModel {
     ]
 
     public static var availableModels: [LocalModel] {
-        coreMLModels + ggufModels
+        // Only Core ML models are currently supported
+        // GGUF models require llama.cpp integration (coming in future update)
+        coreMLModels
     }
 }

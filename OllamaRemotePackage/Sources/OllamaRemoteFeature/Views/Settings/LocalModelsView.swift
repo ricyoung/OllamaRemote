@@ -25,20 +25,10 @@ public struct LocalModelsView: View {
                 Text("Optimized for Apple Neural Engine. Best performance and efficiency on iPhone.")
             }
 
-            Section {
-                ForEach(LocalModel.ggufModels) { model in
-                    ModelRowView(
-                        model: model,
-                        modelManager: modelManager,
-                        onDownload: { await downloadModel(model) },
-                        onDelete: { confirmDelete(model) }
-                    )
-                }
-            } header: {
-                Label("GGUF (Metal GPU)", systemImage: "gpu")
-            } footer: {
-                Text("Uses Metal GPU acceleration. Good compatibility with more models.")
-            }
+            // GGUF models hidden until llama.cpp integration is complete
+            // Section {
+            //     ForEach(LocalModel.ggufModels) { model in ... }
+            // }
 
             if !modelManager.downloadedModels.isEmpty {
                 Section("Storage") {
@@ -65,7 +55,7 @@ public struct LocalModelsView: View {
                         .font(.headline)
                         .foregroundStyle(.tint)
 
-                    Text("Core ML models run on the Neural Engine for best efficiency. GGUF models use Metal GPU. Both work completely offline.")
+                    Text("Core ML models run on the Neural Engine for best efficiency. All processing happens locally on your device.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
