@@ -5,7 +5,7 @@ A modern iOS/iPadOS client for interacting with Large Language Models (LLMs) acr
 **Version:** 1.4.0
 **Platform:** iOS 18+ / iPadOS 18+
 **License:** GPL-3.0
-**Developer:** [Richard Young](https://deepknow.ai/richard)
+**Developer:** [Richard Young](https://deepneuro.ai/richard)
 
 ## Features
 
@@ -152,4 +152,4 @@ This project is licensed under the GPL-3.0 License - see the [LICENSE](LICENSE) 
 
 ---
 
-**Developed by [Richard Young](https://deepknow.ai/richard)**
+**Developed by [Richard Young](https://deepneuro.ai/richard)**
