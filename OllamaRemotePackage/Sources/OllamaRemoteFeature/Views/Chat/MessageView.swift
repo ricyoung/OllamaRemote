@@ -248,9 +248,12 @@ public struct TypingIndicatorView: View {
 
     private func startAnimation() {
         Timer.scheduledTimer(withTimeInterval: 0.3, repeats: true) { _ in
-            withAnimation(.easeInOut(duration: 0.2)) {
-                animationPhase = (animationPhase + 1) % 3
+            Task { @MainActor in
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    animationPhase = (animationPhase + 1) % 3
+                }
             }
         }
     }
 }
+

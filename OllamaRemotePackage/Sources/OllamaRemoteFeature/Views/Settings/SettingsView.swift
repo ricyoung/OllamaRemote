@@ -219,7 +219,7 @@ public struct SettingsView: View {
                     }
                 }
 
-                Link(destination: URL(string: "https://deepneuro.ai/richard")!) {
+                Link(destination: URL(string: "https://deepknow.ai/richard")!) {
                     HStack {
                         Text("Developed by Richard Young")
                         Spacer()

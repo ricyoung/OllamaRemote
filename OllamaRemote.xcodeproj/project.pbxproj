@@ -417,6 +417,7 @@
 			baseConfigurationReferenceRelativePath = Tests.xcconfig;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 4U5S6UFYM4;
 				GENERATE_INFOPLIST_FILE = YES;
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
@@ -431,6 +432,7 @@
 			baseConfigurationReferenceRelativePath = Tests.xcconfig;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = 4U5S6UFYM4;
 				GENERATE_INFOPLIST_FILE = YES;
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
