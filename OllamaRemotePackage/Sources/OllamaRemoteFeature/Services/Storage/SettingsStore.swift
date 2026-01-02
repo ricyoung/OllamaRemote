@@ -23,17 +23,14 @@ public final class SettingsStore: @unchecked Sendable {
 
     public func loadProviderConfigurations() -> [AnyProviderConfiguration] {
         guard let data = defaults.data(forKey: Keys.providerConfigs),
-              var configs = try? decoder.decode([AnyProviderConfiguration].self, from: data) else {
+              let configs = try? decoder.decode([AnyProviderConfiguration].self, from: data) else {
             return defaultConfigurations()
         }
 
-        // Migration: Add On-Device provider if it doesn't exist
-        if !configs.contains(where: { $0.type == .onDevice }) {
-            configs.insert(.onDevice(OnDeviceConfig()), at: 0)
-            saveProviderConfigurations(configs)
-        }
+        // Filter out On-Device provider (coming soon - not yet functional)
+        let filteredConfigs = configs.filter { $0.type != .onDevice }
 
-        return configs
+        return filteredConfigs.isEmpty ? defaultConfigurations() : filteredConfigs
     }
 
     public func saveProviderConfigurations(_ configs: [AnyProviderConfiguration]) {
@@ -143,7 +140,8 @@ public final class SettingsStore: @unchecked Sendable {
 
     private func defaultConfigurations() -> [AnyProviderConfiguration] {
         [
-            .onDevice(OnDeviceConfig()),
+            // On-Device disabled - coming soon in future update
+            // .onDevice(OnDeviceConfig()),
             .local(LocalOllamaConfig()),
             .cloud(OllamaCloudConfig()),
             .openRouter(OpenRouterConfig())

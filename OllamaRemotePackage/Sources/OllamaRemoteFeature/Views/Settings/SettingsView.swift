@@ -149,19 +149,28 @@ public struct SettingsView: View {
                 .disabled(conversations.isEmpty)
             }
 
-            Section("On-Device") {
-                NavigationLink {
-                    LocalModelsView()
-                } label: {
-                    HStack {
-                        Image(systemName: "arrow.down.circle")
-                            .foregroundStyle(.tint)
-                        Text("Download Local Models")
-                        Spacer()
-                        Text("\(LocalModelManager.shared.downloadedModels.count)")
+            Section {
+                HStack {
+                    Image(systemName: "cpu")
+                        .foregroundStyle(.secondary)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("On-Device Models")
+                        Text("Run AI locally on Neural Engine")
+                            .font(.caption)
                             .foregroundStyle(.secondary)
                     }
+                    Spacer()
+                    Text("Coming Soon")
+                        .font(.caption)
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(.orange, in: Capsule())
                 }
+            } header: {
+                Text("On-Device")
+            } footer: {
+                Text("On-device inference with Core ML and Neural Engine is coming in a future update.")
             }
 
             Section("Support") {
