@@ -93,17 +93,33 @@ public struct ProviderSettingsView: View {
                     .disabled(isLoadingModels)
 
                     if !availableModels.isEmpty {
+                        let freeModels = availableModels.filter { $0.isFree }
+                        let paidModels = availableModels.filter { !$0.isFree }
+
                         Picker("Default Model", selection: $selectedDefaultModelId) {
                             Text("None").tag(nil as String?)
-                            ForEach(availableModels) { model in
-                                Text(model.name).tag(model.id as String?)
+
+                            if !freeModels.isEmpty {
+                                Section("Free Models") {
+                                    ForEach(freeModels) { model in
+                                        Text(model.name).tag(model.id as String?)
+                                    }
+                                }
+                            }
+
+                            if !paidModels.isEmpty {
+                                Section("Paid Models") {
+                                    ForEach(paidModels) { model in
+                                        Text(model.name).tag(model.id as String?)
+                                    }
+                                }
                             }
                         }
                     }
                 } header: {
                     Text("Default Model")
                 } footer: {
-                    Text("Set a default model to use when switching to this provider.")
+                    Text("Loading models may take a few seconds depending on your connection. Set a default model to use when switching to this provider.")
                 }
             }
         }

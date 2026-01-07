@@ -141,5 +141,18 @@ struct OpenRouterModelsResponse: Decodable {
         let id: String
         let name: String?
         let context_length: Int?
+        let pricing: Pricing?
+
+        struct Pricing: Decodable {
+            let prompt: String?
+            let completion: String?
+        }
+
+        var isFree: Bool {
+            guard let pricing = pricing else { return false }
+            let promptCost = Double(pricing.prompt ?? "1") ?? 1
+            let completionCost = Double(pricing.completion ?? "1") ?? 1
+            return promptCost == 0 && completionCost == 0
+        }
     }
 }

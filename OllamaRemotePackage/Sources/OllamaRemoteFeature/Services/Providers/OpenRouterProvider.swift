@@ -57,7 +57,7 @@ public actor OpenRouterProvider: LLMProvider {
                 name: model.name ?? model.id,
                 provider: .openRouter,
                 contextLength: model.context_length,
-                isFree: model.id.hasSuffix(":free")
+                isFree: model.isFree
             )
         }
     }
