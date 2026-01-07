@@ -112,15 +112,36 @@ public struct ChatView: View {
                     .scaleEffect(0.8)
             } else if !appState.availableModels.isEmpty {
                 @Bindable var state = appState
+                let freeModels = appState.availableModels.filter { $0.isFree }
+                let paidModels = appState.availableModels.filter { !$0.isFree }
                 Menu {
-                    ForEach(appState.availableModels) { model in
-                        Button {
-                            state.selectedModelId = model.id
-                        } label: {
-                            if model.id == state.selectedModelId {
-                                Label(model.name, systemImage: "checkmark")
-                            } else {
-                                Text(model.name)
+                    if !freeModels.isEmpty {
+                        Section("Free Models") {
+                            ForEach(freeModels) { model in
+                                Button {
+                                    state.selectedModelId = model.id
+                                } label: {
+                                    if model.id == state.selectedModelId {
+                                        Label(model.name, systemImage: "checkmark")
+                                    } else {
+                                        Text(model.name)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    if !paidModels.isEmpty {
+                        Section("Paid Models") {
+                            ForEach(paidModels) { model in
+                                Button {
+                                    state.selectedModelId = model.id
+                                } label: {
+                                    if model.id == state.selectedModelId {
+                                        Label(model.name, systemImage: "checkmark")
+                                    } else {
+                                        Text(model.name)
+                                    }
+                                }
                             }
                         }
                     }
@@ -245,7 +266,9 @@ public struct ChatView: View {
               let config = appState.activeProvider,
               let modelId = appState.selectedModelId else { return }
 
+        // Clear input and dismiss keyboard to ensure TextField updates
         inputText = ""
+        isInputFocused = false
         followUpQuestions = [] // Clear previous follow-ups
 
         // Haptic feedback

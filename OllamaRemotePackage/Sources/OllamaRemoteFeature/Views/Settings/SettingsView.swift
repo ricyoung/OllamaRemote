@@ -174,6 +174,15 @@ public struct SettingsView: View {
             }
 
             Section("Support") {
+                Link(destination: URL(string: "https://github.com/ricyoung/OllamaRemote/blob/main/HELP.md")!) {
+                    Label {
+                        Text("Help & Setup Guide")
+                    } icon: {
+                        Image(systemName: "questionmark.circle")
+                            .foregroundStyle(.blue)
+                    }
+                }
+
                 Link(destination: URL(string: "https://github.com/ricyoung/OllamaRemote/issues/new?template=bug_report.md")!) {
                     Label {
                         Text("Report a Bug")

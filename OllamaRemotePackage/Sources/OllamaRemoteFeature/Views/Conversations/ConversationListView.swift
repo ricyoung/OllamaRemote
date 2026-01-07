@@ -71,7 +71,7 @@ public struct ConversationListView: View {
             ChatView(conversation: conversation)
         }
         .navigationTitle("Conversations")
-        .searchable(text: $searchText, prompt: "Search conversations")
+        .searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search conversations")
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button {
@@ -121,32 +121,77 @@ public struct ConversationListView: View {
 
     @ViewBuilder
     private var quickStartInput: some View {
-        HStack(spacing: 12) {
-            TextField("Ask anything...", text: $quickMessage, axis: .vertical)
-                .textFieldStyle(.plain)
-                .lineLimit(1...4)
-                .focused($isQuickInputFocused)
-                .padding(12)
-                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 20))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 20)
-                        .strokeBorder(Color.primary.opacity(0.1), lineWidth: 0.5)
+        VStack(spacing: 0) {
+            Divider()
+
+            HStack(spacing: 12) {
+                ZStack(alignment: .leading) {
+                    // Custom placeholder with animated rainbow gradient
+                    if quickMessage.isEmpty {
+                        TimelineView(.animation(minimumInterval: 0.05)) { timeline in
+                            let phase = timeline.date.timeIntervalSince1970.truncatingRemainder(dividingBy: 6) / 6
+
+                            Text("Ask anything...")
+                                .font(.body)
+                                .fontWeight(.medium)
+                                .foregroundStyle(
+                                    LinearGradient(
+                                        colors: [
+                                            Color(hue: phase, saturation: 0.8, brightness: 0.85),
+                                            Color(hue: (phase + 0.2).truncatingRemainder(dividingBy: 1), saturation: 0.8, brightness: 0.85),
+                                            Color(hue: (phase + 0.4).truncatingRemainder(dividingBy: 1), saturation: 0.8, brightness: 0.85),
+                                            Color(hue: (phase + 0.6).truncatingRemainder(dividingBy: 1), saturation: 0.8, brightness: 0.85)
+                                        ],
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    )
+                                )
+                                .opacity(isQuickInputFocused ? 0.3 : 1.0)
+                        }
+                        .padding(.horizontal, 16)
+                    }
+
+                    TextField("", text: $quickMessage, axis: .vertical)
+                        .textFieldStyle(.plain)
+                        .lineLimit(1...4)
+                        .focused($isQuickInputFocused)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 14)
                 }
+                .background(
+                    RoundedRectangle(cornerRadius: 24)
+                        .fill(Color(.systemBackground))
+                        .shadow(color: Color.black.opacity(0.1), radius: 6, y: 3)
+                )
+                .overlay {
+                    RoundedRectangle(cornerRadius: 24)
+                        .strokeBorder(
+                            isQuickInputFocused ? Color.accentColor : Color(.systemGray3),
+                            lineWidth: isQuickInputFocused ? 2 : 1.5
+                        )
+                }
+                .animation(.easeInOut(duration: 0.2), value: isQuickInputFocused)
                 .onSubmit {
                     startQuickConversation()
                 }
 
-            Button {
-                startQuickConversation()
-            } label: {
-                Image(systemName: "arrow.up.circle.fill")
-                    .font(.title)
-                    .symbolRenderingMode(.hierarchical)
+                Button {
+                    startQuickConversation()
+                } label: {
+                    Image(systemName: "arrow.up.circle.fill")
+                        .font(.system(size: 36))
+                        .foregroundStyle(
+                            quickMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                                ? Color(.systemGray3)
+                                : Color.accentColor
+                        )
+                }
+                .disabled(quickMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
-            .disabled(quickMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
         }
-        .padding()
-        .background(.bar)
+        .background(Color(.secondarySystemBackground))
     }
 
     private func startQuickConversation() {
