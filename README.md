@@ -96,6 +96,7 @@ open OllamaRemote.xcworkspace
 3. In OllamaRemote, go to Settings > Local Ollama
 4. Enter your computer's IP address and port (default: 11434)
 5. Test Connection to verify
+6. **Tap Save** to enable the provider
 
 ### OpenRouter Setup
 1. Sign up at [OpenRouter](https://openrouter.ai)
@@ -103,6 +104,9 @@ open OllamaRemote.xcworkspace
 3. In OllamaRemote, go to Settings > OpenRouter
 4. Enter your API key
 5. Enable "Prefer Free Models" for cost-free usage
+6. **Tap Save** to enable the provider
+
+> **Need Help?** See the full [Help Guide](HELP.md) for detailed setup instructions, troubleshooting, and tips.
 
 ## Project Architecture
 
