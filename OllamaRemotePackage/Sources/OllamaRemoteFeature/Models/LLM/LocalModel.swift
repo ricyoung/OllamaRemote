@@ -3,6 +3,7 @@ import Foundation
 public enum ModelFormat: String, Codable, Sendable {
     case gguf       // For llama.cpp (Metal GPU)
     case coreML     // For Neural Engine + GPU
+    case mlx        // For MLX Swift (Apple Silicon)
 }
 
 public struct LocalModel: Identifiable, Codable, Equatable, Sendable {
@@ -15,6 +16,7 @@ public struct LocalModel: Identifiable, Codable, Equatable, Sendable {
     public let downloadURL: URL
     public let filename: String
     public let tokenizerURL: URL?
+    public let huggingFaceId: String? // For MLX models
 
     public init(
         id: String,
@@ -25,7 +27,8 @@ public struct LocalModel: Identifiable, Codable, Equatable, Sendable {
         format: ModelFormat = .coreML,
         downloadURL: URL,
         filename: String,
-        tokenizerURL: URL? = nil
+        tokenizerURL: URL? = nil,
+        huggingFaceId: String? = nil
     ) {
         self.id = id
         self.name = name
@@ -36,85 +39,78 @@ public struct LocalModel: Identifiable, Codable, Equatable, Sendable {
         self.downloadURL = downloadURL
         self.filename = filename
         self.tokenizerURL = tokenizerURL
+        self.huggingFaceId = huggingFaceId
     }
 }
 
 extension LocalModel {
-    // Core ML models optimized for Neural Engine
-    public static let coreMLModels: [LocalModel] = [
+    // MLX models from mlx-community (optimized for Apple Silicon)
+    public static let mlxModels: [LocalModel] = [
         LocalModel(
-            id: "openelm-270m-coreml",
-            name: "OpenELM-270M-Instruct",
-            displayName: "Apple OpenELM 270M",
-            size: "270 MB",
-            parameters: "270M",
-            format: .coreML,
-            downloadURL: URL(string: "https://huggingface.co/apple/OpenELM-270M-Instruct/resolve/main/coreml/OpenELM-270M-Instruct.mlpackage.zip")!,
-            filename: "OpenELM-270M-Instruct.mlpackage",
-            tokenizerURL: URL(string: "https://huggingface.co/apple/OpenELM-270M-Instruct/resolve/main/tokenizer.json")
-        ),
-        LocalModel(
-            id: "openelm-450m-coreml",
-            name: "OpenELM-450M-Instruct",
-            displayName: "Apple OpenELM 450M",
-            size: "450 MB",
-            parameters: "450M",
-            format: .coreML,
-            downloadURL: URL(string: "https://huggingface.co/apple/OpenELM-450M-Instruct/resolve/main/coreml/OpenELM-450M-Instruct.mlpackage.zip")!,
-            filename: "OpenELM-450M-Instruct.mlpackage",
-            tokenizerURL: URL(string: "https://huggingface.co/apple/OpenELM-450M-Instruct/resolve/main/tokenizer.json")
-        ),
-        LocalModel(
-            id: "openelm-1b-coreml",
-            name: "OpenELM-1_1B-Instruct",
-            displayName: "Apple OpenELM 1.1B",
-            size: "1.1 GB",
-            parameters: "1.1B",
-            format: .coreML,
-            downloadURL: URL(string: "https://huggingface.co/apple/OpenELM-1_1B-Instruct/resolve/main/coreml/OpenELM-1_1B-Instruct.mlpackage.zip")!,
-            filename: "OpenELM-1_1B-Instruct.mlpackage",
-            tokenizerURL: URL(string: "https://huggingface.co/apple/OpenELM-1_1B-Instruct/resolve/main/tokenizer.json")
-        ),
-        LocalModel(
-            id: "smollm-135m-coreml",
-            name: "SmolLM-135M-Instruct",
+            id: "smollm-135m-mlx",
+            name: "SmolLM-135M-Instruct-4bit",
             displayName: "SmolLM 135M (Fastest)",
-            size: "135 MB",
+            size: "~79 MB",
             parameters: "135M",
-            format: .coreML,
-            downloadURL: URL(string: "https://huggingface.co/HuggingFaceTB/SmolLM-135M-Instruct/resolve/main/coreml/SmolLM-135M-Instruct.mlpackage.zip")!,
-            filename: "SmolLM-135M-Instruct.mlpackage",
-            tokenizerURL: URL(string: "https://huggingface.co/HuggingFaceTB/SmolLM-135M-Instruct/resolve/main/tokenizer.json")
+            format: .mlx,
+            downloadURL: URL(string: "https://huggingface.co/mlx-community/SmolLM-135M-Instruct-4bit")!,
+            filename: "SmolLM-135M-Instruct-4bit",
+            huggingFaceId: "mlx-community/SmolLM-135M-Instruct-4bit"
+        ),
+        LocalModel(
+            id: "smollm-360m-mlx",
+            name: "SmolLM-360M-Instruct-4bit",
+            displayName: "SmolLM 360M",
+            size: "~195 MB",
+            parameters: "360M",
+            format: .mlx,
+            downloadURL: URL(string: "https://huggingface.co/mlx-community/SmolLM-360M-Instruct-4bit")!,
+            filename: "SmolLM-360M-Instruct-4bit",
+            huggingFaceId: "mlx-community/SmolLM-360M-Instruct-4bit"
+        ),
+        LocalModel(
+            id: "smollm-1.7b-mlx",
+            name: "SmolLM-1.7B-Instruct-4bit",
+            displayName: "SmolLM 1.7B",
+            size: "~920 MB",
+            parameters: "1.7B",
+            format: .mlx,
+            downloadURL: URL(string: "https://huggingface.co/mlx-community/SmolLM-1.7B-Instruct-4bit")!,
+            filename: "SmolLM-1.7B-Instruct-4bit",
+            huggingFaceId: "mlx-community/SmolLM-1.7B-Instruct-4bit"
+        ),
+        LocalModel(
+            id: "qwen2.5-0.5b-mlx",
+            name: "Qwen2.5-0.5B-Instruct-4bit",
+            displayName: "Qwen2.5 0.5B",
+            size: "~350 MB",
+            parameters: "0.5B",
+            format: .mlx,
+            downloadURL: URL(string: "https://huggingface.co/mlx-community/Qwen2.5-0.5B-Instruct-4bit")!,
+            filename: "Qwen2.5-0.5B-Instruct-4bit",
+            huggingFaceId: "mlx-community/Qwen2.5-0.5B-Instruct-4bit"
+        ),
+        LocalModel(
+            id: "qwen2.5-1.5b-mlx",
+            name: "Qwen2.5-1.5B-Instruct-4bit",
+            displayName: "Qwen2.5 1.5B",
+            size: "~950 MB",
+            parameters: "1.5B",
+            format: .mlx,
+            downloadURL: URL(string: "https://huggingface.co/mlx-community/Qwen2.5-1.5B-Instruct-4bit")!,
+            filename: "Qwen2.5-1.5B-Instruct-4bit",
+            huggingFaceId: "mlx-community/Qwen2.5-1.5B-Instruct-4bit"
         )
     ]
 
-    // GGUF models for llama.cpp (Metal GPU fallback)
-    public static let ggufModels: [LocalModel] = [
-        LocalModel(
-            id: "qwen2-0.5b-gguf",
-            name: "Qwen2-0.5B-Instruct",
-            displayName: "Qwen2 0.5B (GGUF)",
-            size: "395 MB",
-            parameters: "0.5B",
-            format: .gguf,
-            downloadURL: URL(string: "https://huggingface.co/Qwen/Qwen2-0.5B-Instruct-GGUF/resolve/main/qwen2-0_5b-instruct-q4_k_m.gguf")!,
-            filename: "qwen2-0_5b-instruct-q4_k_m.gguf"
-        ),
-        LocalModel(
-            id: "tinyllama-1.1b-gguf",
-            name: "TinyLlama-1.1B-Chat",
-            displayName: "TinyLlama 1.1B (GGUF)",
-            size: "637 MB",
-            parameters: "1.1B",
-            format: .gguf,
-            downloadURL: URL(string: "https://huggingface.co/TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF/resolve/main/tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf")!,
-            filename: "tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf"
-        )
-    ]
+    // Legacy Core ML models (deprecated in favor of MLX)
+    public static let coreMLModels: [LocalModel] = []
+
+    // Legacy GGUF models (requires llama.cpp integration)
+    public static let ggufModels: [LocalModel] = []
 
     public static var availableModels: [LocalModel] {
-        // Only Core ML models are currently supported
-        // GGUF models require llama.cpp integration (coming in future update)
-        coreMLModels
+        // MLX models are the primary on-device option
+        mlxModels
     }
 }

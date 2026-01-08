@@ -44,6 +44,8 @@ public struct ProviderSettingsView: View {
                 openRouterSection
             case .onDevice:
                 onDeviceSection
+            case .appleIntelligence:
+                appleIntelligenceSection
             }
 
             Section {
@@ -76,8 +78,8 @@ public struct ProviderSettingsView: View {
                 }
             }
 
-            // Default model section (not for on-device)
-            if configuration.type != .onDevice {
+            // Default model section (not for on-device or Apple Intelligence)
+            if configuration.type != .onDevice && configuration.type != .appleIntelligence {
                 Section {
                     Button {
                         Task { await loadAvailableModels() }
@@ -249,16 +251,55 @@ public struct ProviderSettingsView: View {
         } header: {
             Text("Models")
         } footer: {
-            Text("Download models to run completely offline using the Neural Engine.")
+            Text("Download models to run completely offline using MLX.")
         }
 
         Section {
             VStack(alignment: .leading, spacing: 8) {
-                Label("Neural Engine Powered", systemImage: "bolt.fill")
+                Label("MLX Powered", systemImage: "bolt.fill")
                     .font(.subheadline)
                     .foregroundStyle(.tint)
 
-                Text("Core ML models run on Apple's Neural Engine for maximum efficiency and speed. No internet required.")
+                Text("MLX models run on Apple Silicon for efficient inference. Download models for offline use.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.vertical, 4)
+        }
+    }
+
+    @ViewBuilder
+    private var appleIntelligenceSection: some View {
+        Section {
+            HStack {
+                Image(systemName: AppleIntelligenceProvider.isAvailable ? "checkmark.circle.fill" : "xmark.circle.fill")
+                    .foregroundStyle(AppleIntelligenceProvider.isAvailable ? .green : .red)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Status")
+                    Text(AppleIntelligenceProvider.isAvailable ? "Available" : "Not Available")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            if let reason = AppleIntelligenceProvider.unavailabilityReason {
+                Text(reason)
+                    .font(.caption)
+                    .foregroundStyle(.orange)
+            }
+        } header: {
+            Text("Availability")
+        } footer: {
+            Text("Apple Intelligence is built into iOS 26 and requires no additional setup or downloads.")
+        }
+
+        Section {
+            VStack(alignment: .leading, spacing: 8) {
+                Label("On-Device Processing", systemImage: "cpu")
+                    .font(.subheadline)
+                    .foregroundStyle(.tint)
+
+                Text("Apple Intelligence runs entirely on your device using Apple's 3B parameter model. No data is sent to external servers.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -290,6 +331,8 @@ public struct ProviderSettingsView: View {
             }
         case .onDevice:
             break // No additional configuration needed
+        case .appleIntelligence:
+            break // No additional configuration needed
         }
     }
 
@@ -317,6 +360,9 @@ public struct ProviderSettingsView: View {
             testConfig = .openRouter(config)
 
         case .onDevice:
+            testConfig = configuration
+
+        case .appleIntelligence:
             testConfig = configuration
         }
 
@@ -376,6 +422,11 @@ public struct ProviderSettingsView: View {
             config.displayName = displayName
             config.isEnabled = isEnabled
             updatedConfig = .onDevice(config)
+
+        case .appleIntelligence(var config):
+            config.displayName = displayName
+            config.isEnabled = isEnabled
+            updatedConfig = .appleIntelligence(config)
         }
 
         appState.updateProviderConfiguration(updatedConfig)
@@ -413,6 +464,9 @@ public struct ProviderSettingsView: View {
             testConfig = .openRouter(config)
 
         case .onDevice:
+            testConfig = configuration
+
+        case .appleIntelligence:
             testConfig = configuration
         }
 

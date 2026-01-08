@@ -101,6 +101,8 @@ public struct ConversationRowView: View {
 
     private var providerColor: Color {
         switch conversation.providerType {
+        case .appleIntelligence:
+            return .indigo
         case .onDevice:
             return .purple
         case .localOllama:

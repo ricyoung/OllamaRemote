@@ -13,6 +13,7 @@ public enum AnyProviderConfiguration: Codable, Identifiable, Sendable {
     case cloud(OllamaCloudConfig)
     case openRouter(OpenRouterConfig)
     case onDevice(OnDeviceConfig)
+    case appleIntelligence(AppleIntelligenceConfig)
 
     public var id: UUID {
         switch self {
@@ -20,6 +21,7 @@ public enum AnyProviderConfiguration: Codable, Identifiable, Sendable {
         case .cloud(let config): config.id
         case .openRouter(let config): config.id
         case .onDevice(let config): config.id
+        case .appleIntelligence(let config): config.id
         }
     }
 
@@ -29,6 +31,7 @@ public enum AnyProviderConfiguration: Codable, Identifiable, Sendable {
         case .cloud: .ollamaCloud
         case .openRouter: .openRouter
         case .onDevice: .onDevice
+        case .appleIntelligence: .appleIntelligence
         }
     }
 
@@ -38,6 +41,7 @@ public enum AnyProviderConfiguration: Codable, Identifiable, Sendable {
         case .cloud(let config): config.displayName
         case .openRouter(let config): config.displayName
         case .onDevice(let config): config.displayName
+        case .appleIntelligence(let config): config.displayName
         }
     }
 
@@ -47,6 +51,7 @@ public enum AnyProviderConfiguration: Codable, Identifiable, Sendable {
         case .cloud(let config): config.isEnabled
         case .openRouter(let config): config.isEnabled
         case .onDevice(let config): config.isEnabled
+        case .appleIntelligence(let config): config.isEnabled
         }
     }
 
@@ -56,12 +61,13 @@ public enum AnyProviderConfiguration: Codable, Identifiable, Sendable {
         case .cloud(let config): config.baseURL
         case .openRouter(let config): config.baseURL
         case .onDevice(let config): config.baseURL
+        case .appleIntelligence(let config): config.baseURL
         }
     }
 
     public var apiKeyReference: String? {
         switch self {
-        case .local, .onDevice: nil
+        case .local, .onDevice, .appleIntelligence: nil
         case .cloud(let config): config.apiKeyReference
         case .openRouter(let config): config.apiKeyReference
         }

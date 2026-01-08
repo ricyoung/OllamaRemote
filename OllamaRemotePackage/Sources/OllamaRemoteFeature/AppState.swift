@@ -45,6 +45,9 @@ public final class AppState {
         case .onDevice:
             // On-device needs at least one downloaded model
             return !LocalModelManager.shared.downloadedModels.isEmpty
+        case .appleIntelligence:
+            // Apple Intelligence is ready if available on this device
+            return AppleIntelligenceProvider.isAvailable
         }
     }
 

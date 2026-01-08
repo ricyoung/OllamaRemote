@@ -27,10 +27,22 @@ public final class SettingsStore: @unchecked Sendable {
             return defaultConfigurations()
         }
 
-        // Filter out On-Device provider (coming soon - not yet functional)
-        let filteredConfigs = configs.filter { $0.type != .onDevice }
+        // Ensure new providers are added to existing configs
+        var updatedConfigs = configs
+        let existingTypes = Set(configs.map { $0.type })
 
-        return filteredConfigs.isEmpty ? defaultConfigurations() : filteredConfigs
+        // Add Apple Intelligence if not present
+        if !existingTypes.contains(.appleIntelligence) {
+            updatedConfigs.insert(.appleIntelligence(AppleIntelligenceConfig()), at: 0)
+        }
+
+        // Add On-Device MLX if not present
+        if !existingTypes.contains(.onDevice) {
+            let insertIndex = updatedConfigs.firstIndex { $0.type != .appleIntelligence } ?? updatedConfigs.endIndex
+            updatedConfigs.insert(.onDevice(OnDeviceConfig()), at: insertIndex)
+        }
+
+        return updatedConfigs.isEmpty ? defaultConfigurations() : updatedConfigs
     }
 
     public func saveProviderConfigurations(_ configs: [AnyProviderConfiguration]) {
@@ -140,8 +152,8 @@ public final class SettingsStore: @unchecked Sendable {
 
     private func defaultConfigurations() -> [AnyProviderConfiguration] {
         [
-            // On-Device disabled - coming soon in future update
-            // .onDevice(OnDeviceConfig()),
+            .appleIntelligence(AppleIntelligenceConfig()),
+            .onDevice(OnDeviceConfig()),
             .local(LocalOllamaConfig()),
             .cloud(OllamaCloudConfig()),
             .openRouter(OpenRouterConfig())

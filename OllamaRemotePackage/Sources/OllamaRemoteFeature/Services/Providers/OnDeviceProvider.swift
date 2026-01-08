@@ -1,10 +1,12 @@
 import Foundation
-import CoreML
+import MLXLLM
+import MLXLMCommon
+import MLX
 
 public actor OnDeviceProvider: LLMProvider {
     public let configuration: AnyProviderConfiguration
 
-    private var loadedModel: MLModel?
+    private var loadedModelContainer: ModelContainer?
     private var loadedModelId: String?
     private var currentTask: Task<Void, Never>?
 
@@ -68,73 +70,103 @@ public actor OnDeviceProvider: LLMProvider {
                         throw OnDeviceError.modelNotFound(request.model)
                     }
 
-                    let prompt = request.messages.last?.content ?? ""
-
-                    if localModel.format == .coreML {
-                        try await self.runCoreMLInference(
-                            model: localModel,
-                            prompt: prompt,
-                            continuation: continuation
-                        )
-                    } else {
-                        throw OnDeviceError.formatNotSupported("GGUF requires llama.cpp integration")
+                    guard localModel.format == .mlx else {
+                        throw OnDeviceError.formatNotSupported("Only MLX format is supported")
                     }
+
+                    guard let huggingFaceId = localModel.huggingFaceId else {
+                        throw OnDeviceError.modelNotFound("Missing HuggingFace ID for \(localModel.displayName)")
+                    }
+
+                    try await self.runMLXInference(
+                        huggingFaceId: huggingFaceId,
+                        modelId: localModel.id,
+                        request: request,
+                        continuation: continuation
+                    )
+                } catch is CancellationError {
+                    continuation.finish()
                 } catch {
                     continuation.finish(throwing: error)
                 }
             }
             currentTask = task
+
+            continuation.onTermination = { @Sendable _ in
+                task.cancel()
+            }
         }
     }
 
-    private func runCoreMLInference(
-        model: LocalModel,
-        prompt: String,
+    private func runMLXInference(
+        huggingFaceId: String,
+        modelId: String,
+        request: ChatRequest,
         continuation: AsyncThrowingStream<StreamChunk, Error>.Continuation
     ) async throws {
-        let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-        let modelPath = documentsPath.appendingPathComponent("Models").appendingPathComponent(model.filename)
+        // Load model if not already loaded or if different model
+        if loadedModelId != modelId || loadedModelContainer == nil {
+            // Clear previous model
+            loadedModelContainer = nil
+            loadedModelId = nil
 
-        guard FileManager.default.fileExists(atPath: modelPath.path) else {
-            throw OnDeviceError.modelNotDownloaded(model.displayName)
+            // Load new model from HuggingFace using the simplified API
+            loadedModelContainer = try await loadModelContainer(id: huggingFaceId)
+            loadedModelId = modelId
         }
 
-        // Load model if not already loaded
-        if loadedModelId != model.id {
-            let config = MLModelConfiguration()
-            config.computeUnits = .all // Use Neural Engine + GPU + CPU as needed
-
-            // For .mlpackage, we need to compile it first
-            let compiledURL = try await MLModel.compileModel(at: modelPath)
-            loadedModel = try MLModel(contentsOf: compiledURL, configuration: config)
-            loadedModelId = model.id
-        }
-
-        guard loadedModel != nil else {
+        guard let modelContainer = loadedModelContainer else {
             throw OnDeviceError.modelLoadFailed
         }
 
-        // Placeholder response - real implementation needs tokenizer integration
-        let response = "I'm running on-device using Core ML and the Neural Engine! Model: \(model.displayName). Your prompt was: \"\(prompt)\". Full inference requires tokenizer integration."
+        // Build prompt from messages
+        let prompt = buildPrompt(from: request.messages)
 
-        // Stream the response word by word
-        let words = response.split(separator: " ")
-        for (index, word) in words.enumerated() {
-            let isLast = index == words.count - 1
+        // Create a ChatSession with the model
+        let generateParams = GenerateParameters(
+            maxTokens: request.maxTokens ?? 512,
+            temperature: Float(request.temperature ?? 0.7),
+            topP: 0.9
+        )
+
+        let session = ChatSession(
+            modelContainer,
+            instructions: request.systemPrompt,
+            generateParameters: generateParams
+        )
+
+        var tokenCount = 0
+
+        // Stream the response
+        for try await text in session.streamResponse(to: prompt) {
+            try Task.checkCancellation()
+
+            tokenCount += 1
             let chunk = StreamChunk(
-                delta: String(word) + " ",
-                isFinished: isLast,
-                usage: isLast ? StreamChunk.TokenUsage(
-                    promptTokens: 10,
-                    completionTokens: words.count,
-                    totalTokens: 10 + words.count
-                ) : nil
+                delta: text,
+                isFinished: false,
+                usage: nil
             )
             continuation.yield(chunk)
-            try await Task.sleep(nanoseconds: 50_000_000) // 50ms delay
         }
 
+        // Send final chunk with usage info
+        let finalChunk = StreamChunk(
+            delta: "",
+            isFinished: true,
+            usage: StreamChunk.TokenUsage(
+                promptTokens: 0, // We don't track prompt tokens in this API
+                completionTokens: tokenCount,
+                totalTokens: tokenCount
+            )
+        )
+        continuation.yield(finalChunk)
         continuation.finish()
+    }
+
+    private func buildPrompt(from messages: [ChatRequest.ChatMessage]) -> String {
+        // Get the last user message for the chat
+        messages.last(where: { $0.role == "user" })?.content ?? ""
     }
 }
 

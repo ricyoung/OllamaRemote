@@ -42,6 +42,8 @@ public final class ProviderFactory {
             )
         case .onDevice:
             provider = OnDeviceProvider()
+        case .appleIntelligence(let config):
+            provider = AppleIntelligenceProvider(configuration: config)
         }
 
         providerCache[configuration.id] = provider

@@ -1,4 +1,5 @@
 import Foundation
+import MLXLMCommon
 
 @Observable
 @MainActor
@@ -9,18 +10,7 @@ public final class LocalModelManager {
     public private(set) var downloadingModels: Set<String> = []
     public private(set) var downloadedModels: Set<String> = []
 
-    private var downloadTasks: [String: URLSessionDownloadTask] = [:]
-
-    private var modelsDirectory: URL {
-        let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-        let modelsPath = documentsPath.appendingPathComponent("Models", isDirectory: true)
-
-        if !FileManager.default.fileExists(atPath: modelsPath.path) {
-            try? FileManager.default.createDirectory(at: modelsPath, withIntermediateDirectories: true)
-        }
-
-        return modelsPath
-    }
+    private let downloadedModelsKey = "downloadedMLXModels"
 
     private init() {
         loadDownloadedModels()
@@ -30,111 +20,105 @@ public final class LocalModelManager {
         downloadedModels.contains(model.id)
     }
 
-    public func localPath(for model: LocalModel) -> URL? {
-        let path = modelsDirectory.appendingPathComponent(model.filename)
-        return FileManager.default.fileExists(atPath: path.path) ? path : nil
-    }
-
+    /// Download an MLX model from HuggingFace
     public func downloadModel(_ model: LocalModel) async throws {
+        guard model.format == .mlx else {
+            throw LocalModelError.unsupportedFormat("Only MLX format models can be downloaded")
+        }
+
+        guard let huggingFaceId = model.huggingFaceId else {
+            throw LocalModelError.missingHuggingFaceId
+        }
+
         guard !downloadingModels.contains(model.id) else { return }
 
         downloadingModels.insert(model.id)
         downloadProgress[model.id] = 0
 
-        let destinationURL = modelsDirectory.appendingPathComponent(model.filename)
+        do {
+            // Use MLX's built-in model loading which handles HuggingFace downloads
+            // This downloads and caches the model
+            _ = try await loadModelContainer(id: huggingFaceId) { [weak self] progress in
+                Task { @MainActor [weak self] in
+                    self?.downloadProgress[model.id] = progress.fractionCompleted
+                }
+            }
 
-        // Remove existing file if any
-        try? FileManager.default.removeItem(at: destinationURL)
+            // Mark as downloaded
+            downloadedModels.insert(model.id)
+            saveDownloadedModels()
 
-        let (tempURL, _) = try await downloadWithProgress(from: model.downloadURL, modelId: model.id)
+        } catch {
+            downloadingModels.remove(model.id)
+            downloadProgress.removeValue(forKey: model.id)
+            throw error
+        }
 
-        try FileManager.default.moveItem(at: tempURL, to: destinationURL)
-
-        downloadedModels.insert(model.id)
         downloadingModels.remove(model.id)
         downloadProgress.removeValue(forKey: model.id)
-
-        saveDownloadedModels()
-    }
-
-    private func downloadWithProgress(from url: URL, modelId: String) async throws -> (URL, URLResponse) {
-        let request = URLRequest(url: url)
-
-        return try await withCheckedThrowingContinuation { continuation in
-            let session = URLSession(configuration: .default, delegate: nil, delegateQueue: .main)
-
-            let task = session.downloadTask(with: request) { [weak self] tempURL, response, error in
-                Task { @MainActor in
-                    self?.downloadTasks.removeValue(forKey: modelId)
-                }
-
-                if let error = error {
-                    continuation.resume(throwing: error)
-                    return
-                }
-
-                guard let tempURL = tempURL, let response = response else {
-                    continuation.resume(throwing: URLError(.badServerResponse))
-                    return
-                }
-
-                // Move to a temp location we control
-                let newTempURL = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
-                do {
-                    try FileManager.default.moveItem(at: tempURL, to: newTempURL)
-                    continuation.resume(returning: (newTempURL, response))
-                } catch {
-                    continuation.resume(throwing: error)
-                }
-            }
-
-            // Observe progress
-            let observation = task.progress.observe(\.fractionCompleted) { [weak self] progress, _ in
-                Task { @MainActor in
-                    self?.downloadProgress[modelId] = progress.fractionCompleted
-                }
-            }
-
-            // Store reference to prevent deallocation
-            objc_setAssociatedObject(task, "progressObservation", observation, .OBJC_ASSOCIATION_RETAIN)
-
-            downloadTasks[modelId] = task
-            task.resume()
-        }
     }
 
     public func cancelDownload(for model: LocalModel) {
-        downloadTasks[model.id]?.cancel()
-        downloadTasks.removeValue(forKey: model.id)
+        // MLX doesn't support download cancellation directly
+        // Just update the UI state
         downloadingModels.remove(model.id)
         downloadProgress.removeValue(forKey: model.id)
     }
 
     public func deleteModel(_ model: LocalModel) throws {
-        let path = modelsDirectory.appendingPathComponent(model.filename)
-        try FileManager.default.removeItem(at: path)
+        // For MLX models, we need to clear the cache
+        // The MLX library caches models in its own directory
+        // For now, just mark as not downloaded - user can clear app cache if needed
         downloadedModels.remove(model.id)
         saveDownloadedModels()
+
+        // Try to find and delete the cached model directory
+        if let huggingFaceId = model.huggingFaceId {
+            tryDeleteMLXCache(for: huggingFaceId)
+        }
+    }
+
+    private func tryDeleteMLXCache(for huggingFaceId: String) {
+        // MLX caches models in Library/Caches/huggingface/hub/
+        let cacheDir = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+        let hubDir = cacheDir.appendingPathComponent("huggingface/hub")
+
+        // The model ID is converted to a directory format (e.g., mlx-community/SmolLM becomes models--mlx-community--SmolLM)
+        let sanitizedId = huggingFaceId.replacingOccurrences(of: "/", with: "--")
+        let modelDir = hubDir.appendingPathComponent("models--\(sanitizedId)")
+
+        try? FileManager.default.removeItem(at: modelDir)
     }
 
     public func modelSize(_ model: LocalModel) -> String? {
-        guard let path = localPath(for: model) else { return nil }
-        let attributes = try? FileManager.default.attributesOfItem(atPath: path.path)
-        guard let size = attributes?[.size] as? Int64 else { return nil }
-        return ByteCountFormatter.string(fromByteCount: size, countStyle: .file)
+        // Return the estimated size from the model definition
+        return model.size
     }
 
     private func loadDownloadedModels() {
-        let models = LocalModel.availableModels
-        for model in models {
-            let path = modelsDirectory.appendingPathComponent(model.filename)
-            if FileManager.default.fileExists(atPath: path.path) {
-                downloadedModels.insert(model.id)
-            }
+        if let savedModels = UserDefaults.standard.stringArray(forKey: downloadedModelsKey) {
+            downloadedModels = Set(savedModels)
         }
     }
 
     private func saveDownloadedModels() {
-        // Models are tracked by file existence, no separate persistence needed
+        UserDefaults.standard.set(Array(downloadedModels), forKey: downloadedModelsKey)
+    }
+}
+
+public enum LocalModelError: LocalizedError {
+    case unsupportedFormat(String)
+    case missingHuggingFaceId
+    case downloadFailed(String)
+
+    public var errorDescription: String? {
+        switch self {
+        case .unsupportedFormat(let reason):
+            return "Unsupported format: \(reason)"
+        case .missingHuggingFaceId:
+            return "Model is missing HuggingFace ID"
+        case .downloadFailed(let reason):
+            return "Download failed: \(reason)"
+        }
     }
 }

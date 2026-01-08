@@ -228,6 +228,7 @@ public struct StatsView: View {
 
     private func providerColor(_ type: ProviderType) -> Color {
         switch type {
+        case .appleIntelligence: return .indigo
         case .onDevice: return .purple
         case .localOllama: return .blue
         case .ollamaCloud: return .cyan

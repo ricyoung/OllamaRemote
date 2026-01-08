@@ -9,6 +9,7 @@ public struct ProviderDropdownView: View {
     private var providerColor: Color {
         guard let provider = appState.activeProvider else { return .gray }
         switch provider.type {
+        case .appleIntelligence: return .indigo
         case .onDevice: return .purple
         case .localOllama: return .blue
         case .ollamaCloud: return .cyan

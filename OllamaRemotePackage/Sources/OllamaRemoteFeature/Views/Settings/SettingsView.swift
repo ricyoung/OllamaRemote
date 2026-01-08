@@ -149,30 +149,6 @@ public struct SettingsView: View {
                 .disabled(conversations.isEmpty)
             }
 
-            Section {
-                HStack {
-                    Image(systemName: "cpu")
-                        .foregroundStyle(.secondary)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("On-Device Models")
-                        Text("Run AI locally on Neural Engine")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                    Spacer()
-                    Text("Coming Soon")
-                        .font(.caption)
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(.orange, in: Capsule())
-                }
-            } header: {
-                Text("On-Device")
-            } footer: {
-                Text("On-device inference with Core ML and Neural Engine is coming in a future update.")
-            }
-
             Section("Support") {
                 Link(destination: URL(string: "https://github.com/ricyoung/OllamaRemote/blob/main/HELP.md")!) {
                     Label {
@@ -263,15 +239,15 @@ public struct SettingsView: View {
 
             Section("On-Device Inference") {
                 acknowledgementLink(
-                    name: "llama.cpp",
-                    description: "GGUF model inference by Georgi Gerganov",
-                    url: "https://github.com/ggerganov/llama.cpp"
+                    name: "Foundation Models",
+                    description: "Apple Intelligence language model",
+                    url: "https://developer.apple.com/documentation/foundationmodels"
                 )
 
                 acknowledgementLink(
-                    name: "MLX",
-                    description: "Apple's array framework for ML",
-                    url: "https://github.com/ml-explore/mlx"
+                    name: "MLX Swift",
+                    description: "Apple's ML framework for Swift",
+                    url: "https://github.com/ml-explore/mlx-swift"
                 )
 
                 acknowledgementLink(

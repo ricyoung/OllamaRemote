@@ -11,7 +11,7 @@ public struct LocalModelsView: View {
     public var body: some View {
         List {
             Section {
-                ForEach(LocalModel.coreMLModels) { model in
+                ForEach(LocalModel.mlxModels) { model in
                     ModelRowView(
                         model: model,
                         modelManager: modelManager,
@@ -20,15 +20,10 @@ public struct LocalModelsView: View {
                     )
                 }
             } header: {
-                Label("Core ML (Neural Engine)", systemImage: "cpu")
+                Label("MLX Models (Apple Silicon)", systemImage: "bolt.fill")
             } footer: {
-                Text("Optimized for Apple Neural Engine. Best performance and efficiency on iPhone.")
+                Text("Optimized for Apple Silicon. Models are downloaded from Hugging Face and run locally using MLX.")
             }
-
-            // GGUF models hidden until llama.cpp integration is complete
-            // Section {
-            //     ForEach(LocalModel.ggufModels) { model in ... }
-            // }
 
             if !modelManager.downloadedModels.isEmpty {
                 Section("Storage") {
@@ -51,11 +46,11 @@ public struct LocalModelsView: View {
 
             Section {
                 VStack(alignment: .leading, spacing: 8) {
-                    Label("On-Device Inference", systemImage: "bolt.fill")
+                    Label("MLX Powered", systemImage: "bolt.fill")
                         .font(.headline)
                         .foregroundStyle(.tint)
 
-                    Text("Core ML models run on the Neural Engine for best efficiency. All processing happens locally on your device.")
+                    Text("MLX models run efficiently on Apple Silicon. All processing happens locally on your device with no data sent externally.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }

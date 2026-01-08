@@ -29,7 +29,9 @@ public struct InspectorView: View {
                 }
 
                 if let provider = appState.activeProvider {
-                    if provider.type == .localOllama {
+                    if provider.type == .appleIntelligence {
+                        LabeledContent("Endpoint", value: "Apple Intelligence")
+                    } else if provider.type == .localOllama {
                         LabeledContent("Endpoint", value: "Local")
                     } else if provider.type == .openRouter {
                         LabeledContent("Endpoint", value: "OpenRouter API")
@@ -79,6 +81,7 @@ public struct InspectorView: View {
 
     private var providerColor: Color {
         switch conversation.providerType {
+        case .appleIntelligence: return .indigo
         case .onDevice: return .purple
         case .localOllama: return .blue
         case .ollamaCloud: return .cyan
