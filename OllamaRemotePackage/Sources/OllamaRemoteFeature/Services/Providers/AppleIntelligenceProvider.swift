@@ -87,15 +87,31 @@ public actor AppleIntelligenceProvider: LLMProvider {
                     // Build the prompt from messages
                     let prompt = buildPrompt(from: request.messages)
 
-                    // Stream the response
+                    // Stream the response using snapshot-based streaming
+                    // Each snapshot contains the full content so far, so we track previous
+                    // content to calculate the delta for each chunk
                     let stream = session.streamResponse(to: prompt)
+                    var previousContent = ""
 
-                    for try await partial in stream {
+                    for try await snapshot in stream {
                         try Task.checkCancellation()
 
-                        // Extract the text content from the partial response
-                        let text = String(describing: partial)
-                        continuation.yield(StreamChunk(delta: text, isFinished: false, usage: nil))
+                        let currentContent = snapshot.content
+
+                        // Calculate delta: new characters since last snapshot
+                        let delta: String
+                        if currentContent.hasPrefix(previousContent) {
+                            delta = String(currentContent.dropFirst(previousContent.count))
+                        } else {
+                            // Content was reset or changed unexpectedly
+                            delta = currentContent
+                        }
+
+                        if !delta.isEmpty {
+                            continuation.yield(StreamChunk(delta: delta, isFinished: false, usage: nil))
+                        }
+
+                        previousContent = currentContent
                     }
 
                     // Send final chunk
