@@ -117,6 +117,7 @@ public struct LocalModelsView: View {
 }
 
 struct ModelRowView: View {
+    @Environment(\.openURL) private var openURL
     let model: LocalModel
     let modelManager: LocalModelManager
     let onDownload: () async -> Void
@@ -126,8 +127,21 @@ struct ModelRowView: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(model.displayName)
-                        .font(.headline)
+                    HStack(spacing: 6) {
+                        Text(model.displayName)
+                            .font(.headline)
+
+                        if let url = model.huggingFaceURL {
+                            Button {
+                                openURL(url)
+                            } label: {
+                                Image(systemName: "arrow.up.right.square")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
 
                     HStack(spacing: 8) {
                         Text(model.parameters)
@@ -169,6 +183,16 @@ struct ModelRowView: View {
             }
         } else if modelManager.downloadedModels.contains(model.id) {
             Menu {
+                if let url = model.huggingFaceURL {
+                    Button {
+                        openURL(url)
+                    } label: {
+                        Label("View on HuggingFace", systemImage: "arrow.up.right.square")
+                    }
+                }
+
+                Divider()
+
                 Button(role: .destructive) {
                     onDelete()
                 } label: {

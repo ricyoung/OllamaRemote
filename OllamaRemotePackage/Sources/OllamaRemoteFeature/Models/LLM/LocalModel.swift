@@ -41,65 +41,112 @@ public struct LocalModel: Identifiable, Codable, Equatable, Sendable {
         self.tokenizerURL = tokenizerURL
         self.huggingFaceId = huggingFaceId
     }
+
+    /// URL to the model's HuggingFace page
+    public var huggingFaceURL: URL? {
+        guard let huggingFaceId else { return nil }
+        return URL(string: "https://huggingface.co/\(huggingFaceId)")
+    }
 }
 
 extension LocalModel {
     // MLX models from mlx-community (optimized for Apple Silicon)
+    // Ranked by quality and popularity - no Llama models per user preference
     public static let mlxModels: [LocalModel] = [
+        // === Tier 1: Ultra Light (<500MB) - Fast responses ===
         LocalModel(
-            id: "smollm-135m-mlx",
-            name: "SmolLM-135M-Instruct-4bit",
-            displayName: "SmolLM 135M (Fastest)",
-            size: "~79 MB",
-            parameters: "135M",
+            id: "qwen3-0.6b-mlx",
+            name: "Qwen3-0.6B-4bit",
+            displayName: "Qwen3 0.6B (Fastest)",
+            size: "~400 MB",
+            parameters: "0.6B",
             format: .mlx,
-            downloadURL: URL(string: "https://huggingface.co/mlx-community/SmolLM-135M-Instruct-4bit")!,
-            filename: "SmolLM-135M-Instruct-4bit",
-            huggingFaceId: "mlx-community/SmolLM-135M-Instruct-4bit"
+            downloadURL: URL(string: "https://huggingface.co/mlx-community/Qwen3-0.6B-4bit")!,
+            filename: "Qwen3-0.6B-4bit",
+            huggingFaceId: "mlx-community/Qwen3-0.6B-4bit"
         ),
         LocalModel(
-            id: "smollm-360m-mlx",
-            name: "SmolLM-360M-Instruct-4bit",
-            displayName: "SmolLM 360M",
-            size: "~195 MB",
+            id: "smollm2-360m-mlx",
+            name: "SmolLM2-360M-Instruct-4bit",
+            displayName: "SmolLM2 360M",
+            size: "~200 MB",
             parameters: "360M",
             format: .mlx,
-            downloadURL: URL(string: "https://huggingface.co/mlx-community/SmolLM-360M-Instruct-4bit")!,
-            filename: "SmolLM-360M-Instruct-4bit",
-            huggingFaceId: "mlx-community/SmolLM-360M-Instruct-4bit"
+            downloadURL: URL(string: "https://huggingface.co/mlx-community/SmolLM2-360M-Instruct-4bit")!,
+            filename: "SmolLM2-360M-Instruct-4bit",
+            huggingFaceId: "mlx-community/SmolLM2-360M-Instruct-4bit"
         ),
+
+        // === Tier 2: Balanced (~1GB) - Best quality/size ratio ===
         LocalModel(
-            id: "smollm-1.7b-mlx",
-            name: "SmolLM-1.7B-Instruct-4bit",
-            displayName: "SmolLM 1.7B",
-            size: "~920 MB",
+            id: "qwen3-1.7b-mlx",
+            name: "Qwen3-1.7B-4bit",
+            displayName: "Qwen3 1.7B",
+            size: "~1.0 GB",
             parameters: "1.7B",
             format: .mlx,
-            downloadURL: URL(string: "https://huggingface.co/mlx-community/SmolLM-1.7B-Instruct-4bit")!,
-            filename: "SmolLM-1.7B-Instruct-4bit",
-            huggingFaceId: "mlx-community/SmolLM-1.7B-Instruct-4bit"
+            downloadURL: URL(string: "https://huggingface.co/mlx-community/Qwen3-1.7B-4bit")!,
+            filename: "Qwen3-1.7B-4bit",
+            huggingFaceId: "mlx-community/Qwen3-1.7B-4bit"
         ),
         LocalModel(
-            id: "qwen2.5-0.5b-mlx",
-            name: "Qwen2.5-0.5B-Instruct-4bit",
-            displayName: "Qwen2.5 0.5B",
-            size: "~350 MB",
-            parameters: "0.5B",
+            id: "gemma3-1b-mlx",
+            name: "gemma-3-1b-it-qat-4bit",
+            displayName: "Gemma 3 1B",
+            size: "~600 MB",
+            parameters: "1B",
             format: .mlx,
-            downloadURL: URL(string: "https://huggingface.co/mlx-community/Qwen2.5-0.5B-Instruct-4bit")!,
-            filename: "Qwen2.5-0.5B-Instruct-4bit",
-            huggingFaceId: "mlx-community/Qwen2.5-0.5B-Instruct-4bit"
+            downloadURL: URL(string: "https://huggingface.co/mlx-community/gemma-3-1b-it-qat-4bit")!,
+            filename: "gemma-3-1b-it-qat-4bit",
+            huggingFaceId: "mlx-community/gemma-3-1b-it-qat-4bit"
+        ),
+
+        // === Tier 3: High Quality (~2-3GB) - Best responses ===
+        LocalModel(
+            id: "qwen3-4b-mlx",
+            name: "Qwen3-4B-4bit",
+            displayName: "Qwen3 4B",
+            size: "~2.5 GB",
+            parameters: "4B",
+            format: .mlx,
+            downloadURL: URL(string: "https://huggingface.co/mlx-community/Qwen3-4B-4bit")!,
+            filename: "Qwen3-4B-4bit",
+            huggingFaceId: "mlx-community/Qwen3-4B-4bit"
         ),
         LocalModel(
-            id: "qwen2.5-1.5b-mlx",
-            name: "Qwen2.5-1.5B-Instruct-4bit",
-            displayName: "Qwen2.5 1.5B",
-            size: "~950 MB",
-            parameters: "1.5B",
+            id: "gemma3-4b-mlx",
+            name: "gemma-3-4b-it-qat-4bit",
+            displayName: "Gemma 3 4B",
+            size: "~2.5 GB",
+            parameters: "4B",
             format: .mlx,
-            downloadURL: URL(string: "https://huggingface.co/mlx-community/Qwen2.5-1.5B-Instruct-4bit")!,
-            filename: "Qwen2.5-1.5B-Instruct-4bit",
-            huggingFaceId: "mlx-community/Qwen2.5-1.5B-Instruct-4bit"
+            downloadURL: URL(string: "https://huggingface.co/mlx-community/gemma-3-4b-it-qat-4bit")!,
+            filename: "gemma-3-4b-it-qat-4bit",
+            huggingFaceId: "mlx-community/gemma-3-4b-it-qat-4bit"
+        ),
+        LocalModel(
+            id: "ministral-3b-mlx",
+            name: "Ministral-3-3B-Instruct-2512-4bit",
+            displayName: "Ministral 3B",
+            size: "~1.8 GB",
+            parameters: "3B",
+            format: .mlx,
+            downloadURL: URL(string: "https://huggingface.co/mlx-community/Ministral-3-3B-Instruct-2512-4bit")!,
+            filename: "Ministral-3-3B-Instruct-2512-4bit",
+            huggingFaceId: "mlx-community/Ministral-3-3B-Instruct-2512-4bit"
+        ),
+
+        // === Tier 4: Premium (~4GB+) - Maximum quality ===
+        LocalModel(
+            id: "gemma3-12b-mlx",
+            name: "gemma-3-12b-it-qat-4bit",
+            displayName: "Gemma 3 12B (Best)",
+            size: "~7.0 GB",
+            parameters: "12B",
+            format: .mlx,
+            downloadURL: URL(string: "https://huggingface.co/mlx-community/gemma-3-12b-it-qat-4bit")!,
+            filename: "gemma-3-12b-it-qat-4bit",
+            huggingFaceId: "mlx-community/gemma-3-12b-it-qat-4bit"
         )
     ]
 
