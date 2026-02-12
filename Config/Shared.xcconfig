@@ -9,7 +9,7 @@
 PRODUCT_NAME = OllamaRemote
 PRODUCT_DISPLAY_NAME = Ollama Remote
 PRODUCT_BUNDLE_IDENTIFIER = com.ollamaremote.app
-MARKETING_VERSION = 1.5.0
+MARKETING_VERSION = 1.72
 CURRENT_PROJECT_VERSION = 1
 
 // ==========================================
