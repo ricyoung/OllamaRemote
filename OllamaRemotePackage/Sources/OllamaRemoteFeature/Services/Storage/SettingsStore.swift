@@ -42,6 +42,11 @@ public final class SettingsStore: @unchecked Sendable {
             updatedConfigs.insert(.onDevice(OnDeviceConfig()), at: insertIndex)
         }
 
+        // Add OpenClaw if not present
+        if !existingTypes.contains(.openClaw) {
+            updatedConfigs.append(.openClaw(OpenClawConfig()))
+        }
+
         return updatedConfigs.isEmpty ? defaultConfigurations() : updatedConfigs
     }
 
@@ -156,7 +161,8 @@ public final class SettingsStore: @unchecked Sendable {
             .onDevice(OnDeviceConfig()),
             .local(LocalOllamaConfig()),
             .cloud(OllamaCloudConfig()),
-            .openRouter(OpenRouterConfig())
+            .openRouter(OpenRouterConfig()),
+            .openClaw(OpenClawConfig())
         ]
     }
 }

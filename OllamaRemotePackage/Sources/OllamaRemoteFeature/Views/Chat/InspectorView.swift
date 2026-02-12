@@ -35,6 +35,8 @@ public struct InspectorView: View {
                         LabeledContent("Endpoint", value: "Local")
                     } else if provider.type == .openRouter {
                         LabeledContent("Endpoint", value: "OpenRouter API")
+                    } else if provider.type == .openClaw {
+                        LabeledContent("Endpoint", value: "OpenClaw API")
                     } else if provider.type == .ollamaCloud {
                         LabeledContent("Endpoint", value: "Ollama Cloud")
                     } else if provider.type == .onDevice {
@@ -86,6 +88,7 @@ public struct InspectorView: View {
         case .localOllama: return .blue
         case .ollamaCloud: return .cyan
         case .openRouter: return .orange
+        case .openClaw: return .mint
         }
     }
 }

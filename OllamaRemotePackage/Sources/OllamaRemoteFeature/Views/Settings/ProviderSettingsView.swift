@@ -9,6 +9,8 @@ public struct ProviderSettingsView: View {
     @State private var isEnabled: Bool = true
     @State private var host: String = ""
     @State private var port: String = ""
+    @State private var useTLS: Bool = false
+    @State private var pathPrefix: String = "/v1"
     @State private var apiKey: String = ""
     @State private var preferFreeModels: Bool = true
     @State private var isSaving = false
@@ -18,6 +20,7 @@ public struct ProviderSettingsView: View {
     @State private var availableModels: [LLMModel] = []
     @State private var isLoadingModels = false
     @State private var selectedDefaultModelId: String?
+    @State private var manualModelId: String = ""
 
     enum TestResult {
         case success
@@ -42,6 +45,8 @@ public struct ProviderSettingsView: View {
                 cloudSection
             case .openRouter:
                 openRouterSection
+            case .openClaw:
+                openClawSection
             case .onDevice:
                 onDeviceSection
             case .appleIntelligence:
@@ -81,6 +86,13 @@ public struct ProviderSettingsView: View {
             // Default model section (not for on-device or Apple Intelligence)
             if configuration.type != .onDevice && configuration.type != .appleIntelligence {
                 Section {
+                    TextField(manualModelPlaceholder, text: $manualModelId)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .onChange(of: manualModelId) { _, newValue in
+                            selectedDefaultModelId = normalizedModelId(newValue)
+                        }
+
                     Button {
                         Task { await loadAvailableModels() }
                     } label: {
@@ -117,6 +129,13 @@ public struct ProviderSettingsView: View {
                                 }
                             }
                         }
+                        .onChange(of: selectedDefaultModelId) { _, newValue in
+                            manualModelId = newValue ?? ""
+                        }
+                    } else {
+                        Text("If model listing is unavailable, enter the model or agent ID manually.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
                     }
                 } header: {
                     Text("Default Model")
@@ -136,6 +155,9 @@ public struct ProviderSettingsView: View {
         }
         .onAppear {
             loadConfiguration()
+        }
+        .onDisappear {
+            apiKey = ""
         }
     }
 
@@ -234,6 +256,64 @@ public struct ProviderSettingsView: View {
     }
 
     @ViewBuilder
+    private var openClawSection: some View {
+        Section("Connection") {
+            TextField("Host", text: $host)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+                .keyboardType(.URL)
+
+            TextField("Port", text: $port)
+                .keyboardType(.numberPad)
+
+            TextField("API Path Prefix", text: $pathPrefix)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+
+            Toggle("Use HTTPS", isOn: $useTLS)
+
+            if !useTLS && !isLocalNetwork(host) {
+                Label("Unencrypted connection to a remote host. Your access token will be sent in plain text.", systemImage: "exclamationmark.triangle.fill")
+                    .font(.caption)
+                    .foregroundStyle(.orange)
+            }
+        }
+
+        Section("Authentication") {
+            HStack {
+                if isApiKeyVisible {
+                    TextField("Access Token", text: $apiKey)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                } else {
+                    SecureField("Access Token", text: $apiKey)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                }
+                Button {
+                    isApiKeyVisible.toggle()
+                } label: {
+                    Image(systemName: isApiKeyVisible ? "eye.slash" : "eye")
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+
+        Section {
+            Link(destination: URL(string: "https://docs.openclaw.ai/api-reference/gateway/openai-chat-completions-api")!) {
+                HStack {
+                    Text("OpenClaw API Docs")
+                    Spacer()
+                    Image(systemName: "arrow.up.right.square")
+                }
+            }
+        } footer: {
+            Text("OpenClaw can run with OpenAI-compatible chat endpoints. If model listing is disabled, use manual model or agent IDs.")
+        }
+    }
+
+    @ViewBuilder
     private var onDeviceSection: some View {
         Section {
             NavigationLink {
@@ -311,6 +391,7 @@ public struct ProviderSettingsView: View {
         displayName = configuration.displayName
         isEnabled = configuration.isEnabled
         selectedDefaultModelId = appState.getDefaultModel(for: configuration.id)
+        manualModelId = selectedDefaultModelId ?? ""
 
         switch configuration {
         case .local(let config):
@@ -324,6 +405,16 @@ public struct ProviderSettingsView: View {
             }
         case .openRouter(let config):
             preferFreeModels = config.preferFreeModels
+            Task {
+                if let key = try? await KeychainService.shared.retrieve(key: configuration.apiKeyReference ?? "") {
+                    apiKey = key
+                }
+            }
+        case .openClaw(let config):
+            host = config.host
+            port = String(config.port)
+            useTLS = config.useTLS
+            pathPrefix = config.pathPrefix
             Task {
                 if let key = try? await KeychainService.shared.retrieve(key: configuration.apiKeyReference ?? "") {
                     apiKey = key
@@ -358,6 +449,16 @@ public struct ProviderSettingsView: View {
                 try? await KeychainService.shared.store(key: config.apiKeyReference, value: apiKey)
             }
             testConfig = .openRouter(config)
+
+        case .openClaw(var config):
+            config.host = host
+            config.port = Int(port) ?? 18789
+            config.useTLS = useTLS
+            config.pathPrefix = pathPrefix
+            if !apiKey.isEmpty {
+                try? await KeychainService.shared.store(key: config.apiKeyReference, value: apiKey)
+            }
+            testConfig = .openClaw(config)
 
         case .onDevice:
             testConfig = configuration
@@ -418,6 +519,37 @@ public struct ProviderSettingsView: View {
                 }
             }
 
+        case .openClaw(var config):
+            config.displayName = displayName
+            config.isEnabled = isEnabled
+            config.host = host
+            config.port = Int(port) ?? 18789
+            config.useTLS = useTLS
+            config.pathPrefix = pathPrefix
+
+            do {
+                _ = try config.validated()
+            } catch {
+                testResult = .failure(error.localizedDescription)
+                return
+            }
+
+            updatedConfig = .openClaw(config)
+            Task {
+                if !apiKey.isEmpty {
+                    do {
+                        try await KeychainService.shared.store(key: config.apiKeyReference, value: apiKey)
+                    } catch {
+                        await MainActor.run {
+                            testResult = .failure("Failed to save access token: \(error.localizedDescription)")
+                        }
+                    }
+                    await MainActor.run { appState.markProviderConfigured(config.id) }
+                } else {
+                    await MainActor.run { appState.markProviderUnconfigured(config.id) }
+                }
+            }
+
         case .onDevice(var config):
             config.displayName = displayName
             config.isEnabled = isEnabled
@@ -432,7 +564,7 @@ public struct ProviderSettingsView: View {
         appState.updateProviderConfiguration(updatedConfig)
 
         // Save default model selection
-        appState.setDefaultModel(selectedDefaultModelId, for: configuration.id)
+        appState.setDefaultModel(normalizedModelId(manualModelId), for: configuration.id)
 
         dismiss()
     }
@@ -463,6 +595,16 @@ public struct ProviderSettingsView: View {
             }
             testConfig = .openRouter(config)
 
+        case .openClaw(var config):
+            config.host = host
+            config.port = Int(port) ?? 18789
+            config.useTLS = useTLS
+            config.pathPrefix = pathPrefix
+            if !apiKey.isEmpty {
+                try? await KeychainService.shared.store(key: config.apiKeyReference, value: apiKey)
+            }
+            testConfig = .openClaw(config)
+
         case .onDevice:
             testConfig = configuration
 
@@ -482,5 +624,29 @@ public struct ProviderSettingsView: View {
         }
 
         isTesting = false
+    }
+
+    private var manualModelPlaceholder: String {
+        switch configuration.type {
+        case .openClaw:
+            "Model or agent ID (e.g. openclaw:agent-id)"
+        default:
+            "Model ID (manual)"
+        }
+    }
+
+    private func normalizedModelId(_ value: String) -> String? {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
+    }
+
+    private func isLocalNetwork(_ host: String) -> Bool {
+        let trimmed = host.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        return trimmed == "localhost"
+            || trimmed == "127.0.0.1"
+            || trimmed == "::1"
+            || trimmed.hasPrefix("10.")
+            || trimmed.hasPrefix("192.168.")
+            || trimmed.hasSuffix(".local")
     }
 }

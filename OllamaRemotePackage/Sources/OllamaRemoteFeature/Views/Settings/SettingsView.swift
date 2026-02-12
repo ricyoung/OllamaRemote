@@ -235,6 +235,12 @@ public struct SettingsView: View {
                     description: "Unified API for LLMs",
                     url: "https://openrouter.ai"
                 )
+
+                acknowledgementLink(
+                    name: "OpenClaw",
+                    description: "Agent gateway with OpenAI-compatible API",
+                    url: "https://docs.openclaw.ai"
+                )
             }
 
             Section("On-Device Inference") {

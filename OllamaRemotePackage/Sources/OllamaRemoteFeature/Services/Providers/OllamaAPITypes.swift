@@ -134,6 +134,14 @@ struct OpenAIStreamChunk: Decodable {
     }
 }
 
+struct OpenAIModelsResponse: Decodable {
+    let data: [OpenAIModel]
+
+    struct OpenAIModel: Decodable {
+        let id: String
+    }
+}
+
 struct OpenRouterModelsResponse: Decodable {
     let data: [OpenRouterModel]
 

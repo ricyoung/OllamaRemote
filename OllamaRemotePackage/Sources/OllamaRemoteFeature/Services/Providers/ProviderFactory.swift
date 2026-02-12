@@ -40,6 +40,12 @@ public final class ProviderFactory {
                 httpClient: httpClient,
                 keychainService: keychainService
             )
+        case .openClaw(let config):
+            provider = OpenClawProvider(
+                configuration: config,
+                httpClient: httpClient,
+                keychainService: keychainService
+            )
         case .onDevice:
             provider = OnDeviceProvider()
         case .appleIntelligence(let config):

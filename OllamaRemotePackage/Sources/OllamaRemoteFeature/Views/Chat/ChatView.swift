@@ -11,6 +11,8 @@ public struct ChatView: View {
     @State private var showShareSheet = false
     @State private var followUpQuestions: [String] = []
     @State private var isGeneratingFollowUps = false
+    @State private var showModelEntryAlert = false
+    @State private var manualModelEntry = ""
     @FocusState private var isInputFocused: Bool
 
     public init(conversation: Conversation) {
@@ -59,10 +61,29 @@ public struct ChatView: View {
         }
         .task {
             await appState.loadModels()
+            manualModelEntry = appState.selectedModelId ?? ""
             await handlePendingMessage()
         }
         .onChange(of: appState.activeProvider?.id) { _, _ in
             Task { await appState.loadModels() }
+            manualModelEntry = appState.selectedModelId ?? ""
+        }
+        .alert("Set Model ID", isPresented: $showModelEntryAlert) {
+            TextField("Model or agent ID", text: $manualModelEntry)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+
+            Button("Save") {
+                let trimmed = manualModelEntry.trimmingCharacters(in: .whitespacesAndNewlines)
+                appState.selectedModelId = trimmed.isEmpty ? nil : trimmed
+                if let providerId = appState.activeProvider?.id {
+                    appState.setDefaultModel(appState.selectedModelId, for: providerId)
+                }
+            }
+
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Use this when model discovery is unavailable.")
         }
     }
 
@@ -153,6 +174,27 @@ public struct ChatView: View {
                             .font(.subheadline)
                             .fontWeight(.medium)
                         Image(systemName: "chevron.up.chevron.down")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(.ultraThinMaterial, in: Capsule())
+                    .hoverEffect(.lift)
+                }
+            } else {
+                Button {
+                    manualModelEntry = appState.selectedModelId ?? ""
+                    showModelEntryAlert = true
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "cube.fill")
+                            .font(.caption)
+                        Text(appState.selectedModelId ?? "Set Model")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                            .lineLimit(1)
+                        Image(systemName: "pencil")
                             .font(.caption2)
                             .foregroundStyle(.secondary)
                     }

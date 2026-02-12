@@ -111,6 +111,8 @@ public struct ConversationRowView: View {
             return .cyan
         case .openRouter:
             return .orange
+        case .openClaw:
+            return .mint
         }
     }
 

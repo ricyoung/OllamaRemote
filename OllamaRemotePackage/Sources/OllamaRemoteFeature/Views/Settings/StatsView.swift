@@ -233,6 +233,7 @@ public struct StatsView: View {
         case .localOllama: return .blue
         case .ollamaCloud: return .cyan
         case .openRouter: return .orange
+        case .openClaw: return .mint
         }
     }
 }

@@ -39,7 +39,7 @@ public final class AppState {
         case .localOllama:
             // Local Ollama is always ready (uses default host/port)
             return true
-        case .ollamaCloud, .openRouter:
+        case .ollamaCloud, .openRouter, .openClaw:
             // Cloud providers need API key
             return configuredProviderIds.contains(config.id.uuidString)
         case .onDevice:
