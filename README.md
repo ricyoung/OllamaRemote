@@ -2,10 +2,11 @@
 
 A modern iOS/iPadOS client for interacting with Large Language Models (LLMs) across multiple providers.
 
-**Version:** 1.4.0
+**Version:** 2.0
 **Platform:** iOS 18+ / iPadOS 18+
 **License:** GPL-3.0
 **Developer:** [Richard Young](https://deepneuro.ai/richard)
+**Release Notes:** See `RELEASE_NOTES.md`
 
 ## Features
 

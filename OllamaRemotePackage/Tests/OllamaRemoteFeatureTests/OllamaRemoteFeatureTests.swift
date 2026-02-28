@@ -93,12 +93,11 @@ struct OpenClawInputValidationTests {
         #expect(validated.host == "localhost")
     }
 
-    @Test("Host with slash throws invalidHost")
-    func hostWithSlash() {
-        let config = OpenClawConfig(host: "host/path")
-        #expect(throws: ConfigValidationError.self) {
-            try config.validated()
-        }
+    @Test("Full URL host input passes validation")
+    func hostWithPath() throws {
+        let config = OpenClawConfig(host: "http://host.example.com:18789/v1")
+        let validated = try config.validated()
+        #expect(validated.host == "http://host.example.com:18789/v1")
     }
 
     @Test("Empty host throws invalidHost")
@@ -136,6 +135,74 @@ struct OpenClawInputValidationTests {
     @Test("Path with traversal throws invalidPathPrefix")
     func pathWithTraversal() {
         let config = OpenClawConfig(pathPrefix: "/v1/../secret")
+        #expect(throws: ConfigValidationError.self) {
+            try config.validated()
+        }
+    }
+
+    @Test("Host with embedded port is resolved")
+    func hostWithEmbeddedPort() {
+        let config = OpenClawConfig(host: "89.167.78.155:18789", port: 11434)
+        #expect(config.baseURL.absoluteString == "http://89.167.78.155:18789/v1")
+    }
+
+    @Test("Full URL host overrides port, scheme, and pathPrefix")
+    func fullURLOverridesConnectionParts() {
+        let config = OpenClawConfig(
+            host: "https://89.167.78.155:18789/custom/v1",
+            port: 11434,
+            useTLS: false,
+            pathPrefix: "/v1"
+        )
+        #expect(config.baseURL.absoluteString == "https://89.167.78.155:18789/custom/v1")
+    }
+
+    @Test("Full URL host without explicit port does not force default port")
+    func fullURLWithoutPortKeepsImplicitSchemePort() {
+        let config = OpenClawConfig(
+            host: "https://openclaw-gate.taild2f3cc.ts.net",
+            port: 18789,
+            useTLS: false,
+            pathPrefix: "/v1"
+        )
+        #expect(config.baseURL.absoluteString == "https://openclaw-gate.taild2f3cc.ts.net/v1")
+    }
+}
+
+// MARK: - Local Ollama Validation
+
+@Suite("Local Ollama Input Validation")
+struct LocalOllamaInputValidationTests {
+
+    @Test("Default config produces expected base URL")
+    func defaultBaseURL() {
+        let config = LocalOllamaConfig()
+        #expect(config.baseURL.absoluteString == "http://localhost:11434")
+    }
+
+    @Test("Full URL host does not crash and preserves explicit port")
+    func fullURLHostDoesNotCrash() {
+        let config = LocalOllamaConfig(host: "http://10.10.0.129:11434", port: 9999)
+        #expect(config.baseURL.absoluteString == "http://10.10.0.129:11434")
+    }
+
+    @Test("Host with embedded port overrides manual port")
+    func embeddedPortOverridesManualPort() {
+        let config = LocalOllamaConfig(host: "10.10.0.129:22445", port: 11434)
+        #expect(config.baseURL.absoluteString == "http://10.10.0.129:22445")
+    }
+
+    @Test("Empty host fails validation")
+    func emptyHostFailsValidation() {
+        let config = LocalOllamaConfig(host: "   ")
+        #expect(throws: ConfigValidationError.self) {
+            try config.validated()
+        }
+    }
+
+    @Test("Out-of-range port fails validation")
+    func invalidPortFailsValidation() {
+        let config = LocalOllamaConfig(host: "localhost", port: 70000)
         #expect(throws: ConfigValidationError.self) {
             try config.validated()
         }
@@ -280,6 +347,153 @@ struct AnyProviderConfigurationOpenClawTests {
     }
 }
 
+// MARK: - Gateway WS URL Derivation
+
+@Suite("OpenClaw Gateway WS URL Derivation")
+struct OpenClawGatewayURLTests {
+
+    @Test("Default host derives ws URL")
+    func defaultGatewayURL() throws {
+        let config = OpenClawConfig()
+        #expect(try config.gatewayWebSocketURL().absoluteString == "ws://localhost:18789")
+    }
+
+    @Test("HTTPS host derives wss URL")
+    func httpsHostBecomesWSS() throws {
+        let config = OpenClawConfig(host: "https://openclaw-gate.taild2f3cc.ts.net", useTLS: false)
+        #expect(try config.gatewayWebSocketURL().absoluteString == "wss://openclaw-gate.taild2f3cc.ts.net")
+    }
+
+    @Test("Chat share URL strips /chat path for gateway WS")
+    func chatShareURLUsesGatewayRoot() throws {
+        let config = OpenClawConfig(host: "https://openclaw-gate.taild2f3cc.ts.net/chat?session=agent%3Amain%3Amain")
+        #expect(try config.gatewayWebSocketURL().absoluteString == "wss://openclaw-gate.taild2f3cc.ts.net")
+        #expect(config.baseURL.absoluteString == "https://openclaw-gate.taild2f3cc.ts.net/v1")
+    }
+
+    @Test("Direct ws URL is preserved")
+    func directWSURLPreserved() throws {
+        let config = OpenClawConfig(host: "wss://openclaw-gate.taild2f3cc.ts.net")
+        #expect(try config.gatewayWebSocketURL().absoluteString == "wss://openclaw-gate.taild2f3cc.ts.net")
+    }
+}
+
+// MARK: - Model Fallback Selection
+
+@Suite("AppState Model Selection Fallback")
+struct AppStateModelSelectionFallbackTests {
+
+    @Test("Saved default model is kept when provider returns no models")
+    @MainActor
+    func keepsSavedDefaultModelWhenDiscoveryUnavailable() async throws {
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [MockURLProtocol.self]
+
+        MockURLProtocol.requestHandler = { request in
+            guard let url = request.url else {
+                throw NetworkError.invalidURL
+            }
+            guard let response = HTTPURLResponse(
+                url: url,
+                statusCode: 200,
+                httpVersion: nil,
+                headerFields: ["Content-Type": "application/json"]
+            ) else {
+                throw NetworkError.invalidResponse
+            }
+            let body = """
+            { "models": [] }
+            """
+            return (response, Data(body.utf8))
+        }
+
+        defer { MockURLProtocol.requestHandler = nil }
+
+        let httpClient = HTTPClient(configuration: configuration)
+        let providerFactory = ProviderFactory(httpClient: httpClient, keychainService: .shared)
+        let state = AppState(providerFactory: providerFactory)
+
+        let providerId = UUID(uuidString: "8B20C14A-3A2A-4420-B754-EE0C12831E83")!
+        let config = LocalOllamaConfig(
+            id: providerId,
+            displayName: "Local Test",
+            host: "localhost",
+            port: 11434,
+            isEnabled: true
+        )
+
+        state.providerConfigurations = [.local(config)]
+        state.selectedProviderId = providerId
+        state.defaultModelIds = [providerId.uuidString: "manual-model-id"]
+        state.selectedModelId = nil
+
+        await state.loadModels()
+
+        #expect(state.availableModels.isEmpty)
+        #expect(state.selectedModelId == "manual-model-id")
+    }
+}
+
+// MARK: - Diagnostics Redaction
+
+@Suite("Diagnostics Redaction")
+struct DiagnosticsRedactionTests {
+
+    @Test("Bearer tokens and hex-like secrets are redacted in export")
+    func exportRedactsSecrets() async {
+        let suiteName = "DiagnosticsRedactionTests.\(UUID().uuidString)"
+        guard let defaults = UserDefaults(suiteName: suiteName) else {
+            Issue.record("Failed to create isolated UserDefaults suite")
+            return
+        }
+        defaults.removePersistentDomain(forName: suiteName)
+
+        let store = DiagnosticsStore(defaults: defaults)
+        await store.record(
+            category: "OpenClaw",
+            level: .error,
+            message: "Authorization: Bearer 75e155ea1b044456d321aa52dd80d65a1bdc3c3b5dbc4ca1",
+            metadata: ["rawToken": "75e155ea1b044456d321aa52dd80d65a1bdc3c3b5dbc4ca1"]
+        )
+
+        let text = await store.exportText(limit: 20)
+        #expect(!text.contains("75e155ea1b044456d321aa52dd80d65a1bdc3c3b5dbc4ca1"))
+        #expect(text.contains("Bearer [REDACTED]"))
+        #expect(text.contains("rawToken=[REDACTED]"))
+    }
+
+    @Test("Sensitive metadata keys are redacted")
+    func sensitiveMetadataKeysAreRedacted() async {
+        let suiteName = "DiagnosticsMetadataTests.\(UUID().uuidString)"
+        guard let defaults = UserDefaults(suiteName: suiteName) else {
+            Issue.record("Failed to create isolated UserDefaults suite")
+            return
+        }
+        defaults.removePersistentDomain(forName: suiteName)
+
+        let store = DiagnosticsStore(defaults: defaults)
+        await store.record(
+            category: "OpenClaw",
+            message: "probe",
+            metadata: [
+                "apiKey": "abc123",
+                "authorization": "Bearer should_not_show",
+                "status": "ok"
+            ]
+        )
+
+        let entries = await store.recentEntries(limit: 10)
+        guard let first = entries.first else {
+            Issue.record("Expected at least one diagnostics entry")
+            return
+        }
+
+        #expect(first.metadata["apiKey"] == "[REDACTED]")
+        #expect(first.metadata["authorization"] == "[REDACTED]")
+        #expect(first.metadata["status"] == "ok")
+    }
+}
+
 // MARK: - Helper for JSON key inspection
 
 private enum AnyCodableValue: Decodable {
@@ -295,4 +509,34 @@ private enum AnyCodableValue: Decodable {
         else if let b = try? container.decode(Bool.self) { self = .bool(b) }
         else { self = .null }
     }
+}
+
+private final class MockURLProtocol: URLProtocol, @unchecked Sendable {
+    nonisolated(unsafe) static var requestHandler: ((URLRequest) throws -> (HTTPURLResponse, Data))?
+
+    override class func canInit(with request: URLRequest) -> Bool {
+        request.url != nil
+    }
+
+    override class func canonicalRequest(for request: URLRequest) -> URLRequest {
+        request
+    }
+
+    override func startLoading() {
+        guard let handler = Self.requestHandler else {
+            client?.urlProtocol(self, didFailWithError: NetworkError.invalidResponse)
+            return
+        }
+
+        do {
+            let (response, data) = try handler(request)
+            client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
+            client?.urlProtocol(self, didLoad: data)
+            client?.urlProtocolDidFinishLoading(self)
+        } catch {
+            client?.urlProtocol(self, didFailWithError: error)
+        }
+    }
+
+    override func stopLoading() {}
 }

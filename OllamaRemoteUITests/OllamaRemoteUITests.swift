@@ -23,4 +23,44 @@ final class OllamaRemoteUITests: XCTestCase {
         // Use XCTAssert and related functions to verify your tests produce the correct results.
         XCTAssertTrue(true)
     }
+
+    @MainActor
+    func testCaptureOpenClawScreenshots() throws {
+        let app = XCUIApplication()
+        app.launch()
+
+        let settingsButton = app.navigationBars.buttons["Settings"]
+        if !settingsButton.waitForExistence(timeout: 6) {
+            let fallback = app.buttons["gear"].firstMatch
+            XCTAssertTrue(fallback.waitForExistence(timeout: 3), "Settings button not found")
+            fallback.tap()
+        } else {
+            settingsButton.tap()
+        }
+
+        let openClawRow = app.staticTexts["OpenClaw"].firstMatch
+        XCTAssertTrue(openClawRow.waitForExistence(timeout: 6), "OpenClaw row not found in Settings")
+        openClawRow.tap()
+
+        let connectionHeader = app.staticTexts["Connection"].firstMatch
+        XCTAssertTrue(connectionHeader.waitForExistence(timeout: 6), "OpenClaw connection section not visible")
+        attachScreenshot(named: "openclaw_provider_config")
+
+        let diagnosticsHeader = app.staticTexts["Diagnostics"].firstMatch
+        if !diagnosticsHeader.isHittable {
+            app.swipeUp()
+            app.swipeUp()
+        }
+
+        XCTAssertTrue(diagnosticsHeader.waitForExistence(timeout: 5), "OpenClaw diagnostics section not found")
+        attachScreenshot(named: "openclaw_diagnostics")
+    }
+
+    private func attachScreenshot(named name: String) {
+        let screenshot = XCUIScreen.main.screenshot()
+        let attachment = XCTAttachment(screenshot: screenshot)
+        attachment.name = name
+        attachment.lifetime = .keepAlways
+        add(attachment)
+    }
 }

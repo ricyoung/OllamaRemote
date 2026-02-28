@@ -6,6 +6,8 @@ public struct SettingsView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var conversations: [Conversation]
     @State private var showClearConfirmation = false
+    @AppStorage("diagnosticsUnlocked") private var diagnosticsUnlocked = false
+    @State private var versionTapCount = 0
 
     public init() {}
 
@@ -200,8 +202,15 @@ public struct SettingsView: View {
                 HStack {
                     Text("Version")
                     Spacer()
-                    Text("1.4.0")
+                    Text("2.0")
                         .foregroundStyle(.secondary)
+                }
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    versionTapCount += 1
+                    if versionTapCount >= 5 {
+                        diagnosticsUnlocked = true
+                    }
                 }
 
                 Link(destination: URL(string: "https://github.com/ricyoung/OllamaRemote")!) {
@@ -220,6 +229,25 @@ public struct SettingsView: View {
                         Image(systemName: "arrow.up.right.square")
                             .foregroundStyle(.secondary)
                     }
+                }
+            }
+
+            if diagnosticsUnlocked {
+                Section {
+                    NavigationLink {
+                        DiagnosticsView()
+                    } label: {
+                        HStack {
+                            Text("Export Debug Diagnostics")
+                            Spacer()
+                            Image(systemName: "wrench.and.screwdriver")
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                } header: {
+                    Text("Diagnostics")
+                } footer: {
+                    Text("Diagnostics are kept locally on device. Exported reports redact tokens and API keys.")
                 }
             }
 

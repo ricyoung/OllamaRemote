@@ -2,16 +2,10 @@ import Foundation
 
 public actor OpenRouterProvider: LLMProvider {
     public let configuration: AnyProviderConfiguration
+    private let config: OpenRouterConfig
     private let httpClient: HTTPClient
     private let keychainService: KeychainService
     private var currentTask: Task<Void, Never>?
-
-    private var config: OpenRouterConfig {
-        guard case .openRouter(let cfg) = configuration else {
-            fatalError("OpenRouterProvider requires OpenRouterConfig")
-        }
-        return cfg
-    }
 
     public init(
         configuration: OpenRouterConfig,
@@ -19,6 +13,7 @@ public actor OpenRouterProvider: LLMProvider {
         keychainService: KeychainService = .shared
     ) {
         self.configuration = .openRouter(configuration)
+        self.config = configuration
         self.httpClient = httpClient
         self.keychainService = keychainService
     }

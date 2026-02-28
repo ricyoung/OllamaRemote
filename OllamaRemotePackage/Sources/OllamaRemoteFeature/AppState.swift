@@ -106,21 +106,28 @@ public final class AppState {
 
         isLoadingModels = true
         modelError = nil
+        let providerId = config.id.uuidString
+        let savedDefaultModelId = defaultModelIds[providerId]
 
         let provider = providerFactory.provider(for: config)
         do {
             availableModels = try await provider.fetchModels()
-            // Use default model for this provider, or first available
-            let providerId = config.id.uuidString
-            if let defaultId = defaultModelIds[providerId],
-               availableModels.contains(where: { $0.id == defaultId }) {
-                selectedModelId = defaultId
+            // Keep saved model IDs even when discovery is unavailable.
+            if let savedDefaultModelId {
+                if availableModels.isEmpty || availableModels.contains(where: { $0.id == savedDefaultModelId }) {
+                    selectedModelId = savedDefaultModelId
+                } else if let first = availableModels.first {
+                    selectedModelId = first.id
+                }
             } else if selectedModelId == nil, let first = availableModels.first {
                 selectedModelId = first.id
             }
         } catch {
             modelError = error
             availableModels = []
+            if let savedDefaultModelId {
+                selectedModelId = savedDefaultModelId
+            }
         }
 
         isLoadingModels = false

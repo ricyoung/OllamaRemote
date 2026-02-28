@@ -2,29 +2,26 @@ import Foundation
 
 public actor LocalOllamaProvider: LLMProvider {
     public let configuration: AnyProviderConfiguration
+    private let config: LocalOllamaConfig
     private let httpClient: HTTPClient
     private var currentTask: Task<Void, Never>?
 
-    private var config: LocalOllamaConfig {
-        guard case .local(let cfg) = configuration else {
-            fatalError("LocalOllamaProvider requires LocalOllamaConfig")
-        }
-        return cfg
-    }
-
     public init(configuration: LocalOllamaConfig, httpClient: HTTPClient = .shared) {
         self.configuration = .local(configuration)
+        self.config = configuration
         self.httpClient = httpClient
     }
 
     public func testConnection() async throws -> Bool {
-        let url = config.baseURL.appendingPathComponent("api/tags")
+        let validated = try config.validated()
+        let url = validated.baseURL.appendingPathComponent("api/tags")
         let _: OllamaModelsResponse = try await httpClient.get(url: url)
         return true
     }
 
     public func fetchModels() async throws -> [LLMModel] {
-        let url = config.baseURL.appendingPathComponent("api/tags")
+        let validated = try config.validated()
+        let url = validated.baseURL.appendingPathComponent("api/tags")
         let response: OllamaModelsResponse = try await httpClient.get(url: url)
         return response.models.map { model in
             LLMModel(
@@ -38,7 +35,8 @@ public actor LocalOllamaProvider: LLMProvider {
     }
 
     public func chat(request: ChatRequest) async throws -> ChatResponse {
-        let url = config.baseURL.appendingPathComponent("api/chat")
+        let validated = try config.validated()
+        let url = validated.baseURL.appendingPathComponent("api/chat")
         let body = OllamaChatRequest(
             model: request.model,
             messages: request.messages,
@@ -58,7 +56,8 @@ public actor LocalOllamaProvider: LLMProvider {
         AsyncThrowingStream { continuation in
             let task = Task {
                 do {
-                    let url = config.baseURL.appendingPathComponent("api/chat")
+                    let validated = try config.validated()
+                    let url = validated.baseURL.appendingPathComponent("api/chat")
                     let body = OllamaChatRequest(
                         model: request.model,
                         messages: request.messages,

@@ -21,9 +21,17 @@ public struct ProviderSettingsView: View {
     @State private var isLoadingModels = false
     @State private var selectedDefaultModelId: String?
     @State private var manualModelId: String = ""
+    @State private var openClawSnapshot: OpenClawDiagnosticsSnapshot?
+    @State private var isProbingGateway = false
+    @State private var openClawProbeResult: ProbeResult?
 
     enum TestResult {
         case success
+        case failure(String)
+    }
+
+    enum ProbeResult {
+        case success(String)
         case failure(String)
     }
 
@@ -107,25 +115,30 @@ public struct ProviderSettingsView: View {
                     .disabled(isLoadingModels)
 
                     if !availableModels.isEmpty {
-                        let freeModels = availableModels.filter { $0.isFree }
-                        let paidModels = availableModels.filter { !$0.isFree }
-
                         Picker("Default Model", selection: $selectedDefaultModelId) {
                             Text("None").tag(nil as String?)
+                            if configuration.type == .openRouter {
+                                let freeModels = availableModels.filter { $0.isFree }
+                                let paidModels = availableModels.filter { !$0.isFree }
 
-                            if !freeModels.isEmpty {
-                                Section("Free Models") {
-                                    ForEach(freeModels) { model in
-                                        Text(model.name).tag(model.id as String?)
+                                if !freeModels.isEmpty {
+                                    Section("Free Models") {
+                                        ForEach(freeModels) { model in
+                                            Text(model.name).tag(model.id as String?)
+                                        }
                                     }
                                 }
-                            }
 
-                            if !paidModels.isEmpty {
-                                Section("Paid Models") {
-                                    ForEach(paidModels) { model in
-                                        Text(model.name).tag(model.id as String?)
+                                if !paidModels.isEmpty {
+                                    Section("Paid Models") {
+                                        ForEach(paidModels) { model in
+                                            Text(model.name).tag(model.id as String?)
+                                        }
                                     }
+                                }
+                            } else {
+                                ForEach(availableModels) { model in
+                                    Text(model.name).tag(model.id as String?)
                                 }
                             }
                         }
@@ -155,6 +168,9 @@ public struct ProviderSettingsView: View {
         }
         .onAppear {
             loadConfiguration()
+            if configuration.type == .openClaw {
+                Task { await refreshOpenClawDiagnostics() }
+            }
         }
         .onDisappear {
             apiKey = ""
@@ -258,7 +274,7 @@ public struct ProviderSettingsView: View {
     @ViewBuilder
     private var openClawSection: some View {
         Section("Connection") {
-            TextField("Host", text: $host)
+            TextField("Host or Base URL", text: $host)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
                 .keyboardType(.URL)
@@ -301,15 +317,88 @@ public struct ProviderSettingsView: View {
         }
 
         Section {
-            Link(destination: URL(string: "https://docs.openclaw.ai/api-reference/gateway/openai-chat-completions-api")!) {
+            LabeledContent("HTTP Base URL") {
+                Text(openClawResolvedHTTPBaseURL)
+                    .font(.caption.monospaced())
+                    .foregroundStyle(.secondary)
+                    .textSelection(.enabled)
+            }
+
+            LabeledContent("Gateway WS URL") {
+                Text(openClawResolvedGatewayURL)
+                    .font(.caption.monospaced())
+                    .foregroundStyle(.secondary)
+                    .textSelection(.enabled)
+            }
+
+            LabeledContent("Configured Mode") {
+                Text(openClawConfiguredMode)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            LabeledContent("Last Active Mode") {
+                Text(openClawSnapshot?.lastActiveMode.rawValue ?? "Unknown")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            if let detail = openClawSnapshot?.lastTransportDetail, !detail.isEmpty {
+                Text(detail)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Button {
+                Task { await probeGateway() }
+            } label: {
                 HStack {
-                    Text("OpenClaw API Docs")
+                    Text("Probe Gateway (chat.send \"ping\")")
+                    Spacer()
+                    if isProbingGateway {
+                        ProgressView()
+                    }
+                }
+            }
+            .disabled(isProbingGateway)
+
+            if let probeResult = openClawProbeResult {
+                switch probeResult {
+                case .success(let message):
+                    Text(message)
+                        .font(.caption)
+                        .foregroundStyle(.green)
+                        .textSelection(.enabled)
+                case .failure(let message):
+                    Text(message)
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                        .textSelection(.enabled)
+                }
+            }
+        } header: {
+            Text("Diagnostics")
+        } footer: {
+            Text("Diagnostics stay local on this device. Exported reports redact Bearer tokens, API keys, and passwords.")
+        }
+
+        Section {
+            Link(destination: URL(string: "https://docs.openclaw.ai/gateway/protocol")!) {
+                HStack {
+                    Text("Gateway Protocol Docs")
+                    Spacer()
+                    Image(systemName: "arrow.up.right.square")
+                }
+            }
+            Link(destination: URL(string: "https://docs.openclaw.ai/gateway/openai-http-api")!) {
+                HStack {
+                    Text("OpenAI HTTP API Docs")
                     Spacer()
                     Image(systemName: "arrow.up.right.square")
                 }
             }
         } footer: {
-            Text("OpenClaw can run with OpenAI-compatible chat endpoints. If model listing is disabled, use manual model or agent IDs.")
+            Text("Gateway WebSocket works by default. OpenAI-compatible HTTP endpoints (/v1/chat/completions and /v1/responses) are optional and may be disabled. If model listing is unavailable, enter model or agent IDs manually.")
         }
     }
 
@@ -436,6 +525,13 @@ public struct ProviderSettingsView: View {
         case .local(var config):
             config.host = host
             config.port = Int(port) ?? 11434
+            do {
+                _ = try config.validated()
+            } catch {
+                availableModels = []
+                isLoadingModels = false
+                return
+            }
             testConfig = .local(config)
 
         case .cloud(let config):
@@ -488,6 +584,12 @@ public struct ProviderSettingsView: View {
             config.isEnabled = isEnabled
             config.host = host
             config.port = Int(port) ?? 11434
+            do {
+                _ = try config.validated()
+            } catch {
+                testResult = .failure(error.localizedDescription)
+                return
+            }
             updatedConfig = .local(config)
 
         case .cloud(var config):
@@ -579,6 +681,13 @@ public struct ProviderSettingsView: View {
         case .local(var config):
             config.host = host
             config.port = Int(port) ?? 11434
+            do {
+                _ = try config.validated()
+            } catch {
+                testResult = .failure(error.localizedDescription)
+                isTesting = false
+                return
+            }
             testConfig = .local(config)
 
         case .cloud(let config):
@@ -623,7 +732,95 @@ public struct ProviderSettingsView: View {
             testResult = .failure(error.localizedDescription)
         }
 
+        if configuration.type == .openClaw {
+            await refreshOpenClawDiagnostics()
+        }
+
         isTesting = false
+    }
+
+    private var openClawResolvedHTTPBaseURL: String {
+        guard let config = draftOpenClawConfig else { return "N/A" }
+        return config.baseURL.absoluteString
+    }
+
+    private var openClawResolvedGatewayURL: String {
+        guard let config = draftOpenClawConfig else { return "N/A" }
+        do {
+            return try config.gatewayWebSocketURL().absoluteString
+        } catch {
+            return "Invalid host"
+        }
+    }
+
+    private var openClawConfiguredMode: String {
+        guard let config = draftOpenClawConfig else { return "Unknown" }
+        let trimmedHost = config.host.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        if trimmedHost.hasPrefix("ws://") || trimmedHost.hasPrefix("wss://") {
+            return OpenClawTransportMode.websocketDirect.rawValue
+        }
+        return "HTTP Primary + WebSocket Fallback"
+    }
+
+    private var draftOpenClawConfig: OpenClawConfig? {
+        guard case .openClaw(var config) = configuration else {
+            return nil
+        }
+        config.host = host
+        config.port = Int(port) ?? 18789
+        config.useTLS = useTLS
+        config.pathPrefix = pathPrefix
+        return config
+    }
+
+    private func refreshOpenClawDiagnostics() async {
+        guard configuration.type == .openClaw else { return }
+        let provider = ProviderFactory.shared.provider(for: configuration)
+        guard let openClawProvider = provider as? OpenClawProvider else { return }
+        openClawSnapshot = await openClawProvider.diagnosticsSnapshot()
+    }
+
+    private func probeGateway() async {
+        guard let config = draftOpenClawConfig else { return }
+
+        openClawProbeResult = nil
+        isProbingGateway = true
+
+        do {
+            _ = try config.validated()
+        } catch {
+            openClawProbeResult = .failure(error.localizedDescription)
+            isProbingGateway = false
+            return
+        }
+
+        if !apiKey.isEmpty {
+            do {
+                try await KeychainService.shared.store(key: config.apiKeyReference, value: apiKey)
+            } catch {
+                openClawProbeResult = .failure("Failed to save access token: \(error.localizedDescription)")
+                isProbingGateway = false
+                return
+            }
+        }
+
+        let probeProvider = OpenClawProvider(
+            configuration: config,
+            httpClient: .shared,
+            keychainService: .shared
+        )
+
+        do {
+            let result = try await probeProvider.probeGateway(message: "ping")
+            let response = result.responseText.isEmpty ? "(empty response)" : result.responseText
+            openClawProbeResult = .success("Probe OK (\(result.sessionKey)): \(response)")
+            openClawSnapshot = await probeProvider.diagnosticsSnapshot()
+        } catch {
+            openClawProbeResult = .failure(error.localizedDescription)
+            openClawSnapshot = await probeProvider.diagnosticsSnapshot()
+        }
+
+        isProbingGateway = false
     }
 
     private var manualModelPlaceholder: String {
@@ -642,11 +839,18 @@ public struct ProviderSettingsView: View {
 
     private func isLocalNetwork(_ host: String) -> Bool {
         let trimmed = host.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        return trimmed == "localhost"
-            || trimmed == "127.0.0.1"
-            || trimmed == "::1"
-            || trimmed.hasPrefix("10.")
-            || trimmed.hasPrefix("192.168.")
-            || trimmed.hasSuffix(".local")
+        let hostOnly: String
+        if trimmed.contains("://"), let parsed = URLComponents(string: trimmed), let parsedHost = parsed.host {
+            hostOnly = parsedHost.lowercased()
+        } else {
+            hostOnly = trimmed
+        }
+
+        return hostOnly == "localhost"
+            || hostOnly == "127.0.0.1"
+            || hostOnly == "::1"
+            || hostOnly.hasPrefix("10.")
+            || hostOnly.hasPrefix("192.168.")
+            || hostOnly.hasSuffix(".local")
     }
 }

@@ -77,7 +77,8 @@ public actor HTTPClient {
     public func streamSSE<B: Encodable>(
         url: URL,
         body: B,
-        headers: [String: String] = [:]
+        headers: [String: String] = [:],
+        requestTimeout: TimeInterval? = nil
     ) -> AsyncThrowingStream<String, Error> {
         AsyncThrowingStream { continuation in
             Task {
@@ -87,6 +88,9 @@ public actor HTTPClient {
                     request.setValue("application/json", forHTTPHeaderField: "Content-Type")
                     request.setValue("text/event-stream", forHTTPHeaderField: "Accept")
                     headers.forEach { request.setValue($1, forHTTPHeaderField: $0) }
+                    if let requestTimeout {
+                        request.timeoutInterval = requestTimeout
+                    }
                     request.httpBody = try encoder.encode(body)
 
                     let (bytes, response) = try await session.bytes(for: request)

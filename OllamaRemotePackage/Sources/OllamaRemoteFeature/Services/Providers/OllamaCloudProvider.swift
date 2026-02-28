@@ -2,16 +2,10 @@ import Foundation
 
 public actor OllamaCloudProvider: LLMProvider {
     public let configuration: AnyProviderConfiguration
+    private let config: OllamaCloudConfig
     private let httpClient: HTTPClient
     private let keychainService: KeychainService
     private var currentTask: Task<Void, Never>?
-
-    private var config: OllamaCloudConfig {
-        guard case .cloud(let cfg) = configuration else {
-            fatalError("OllamaCloudProvider requires OllamaCloudConfig")
-        }
-        return cfg
-    }
 
     public init(
         configuration: OllamaCloudConfig,
@@ -19,6 +13,7 @@ public actor OllamaCloudProvider: LLMProvider {
         keychainService: KeychainService = .shared
     ) {
         self.configuration = .cloud(configuration)
+        self.config = configuration
         self.httpClient = httpClient
         self.keychainService = keychainService
     }
